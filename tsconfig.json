@@ -1,0 +1,16 @@
+{
+  "extends": "./.svelte-kit/tsconfig.json",
+  "compilerOptions": {
+    "allowJs": true,                // Permite usar archivos .js
+    "checkJs": false,               // No verificar tipos en .js
+    "strict": false,                // Desactiva modo estricto de TypeScript
+    "skipLibCheck": true,           // Ignora chequeos en dependencias
+    "esModuleInterop": true,        // Soporte para import/export moderno
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "sourceMap": true,
+    "moduleResolution": "bundler"
+  },
+  "include": ["src"],               // Solo incluye tu código en src/
+  "exclude": ["node_modules", "build"]
+}

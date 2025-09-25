@@ -1,0 +1,27 @@
+# Node
+node_modules
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# SvelteKit build
+.svelte-kit
+.build
+.output
+dist
+.vercel
+
+# Local environment files
+.env
+.env.*
+!.env.example
+
+# VS Code
+.vscode/
+*.code-workspace
+
+# Mac / Linux / Windows basura
+.DS_Store
+Thumbs.db
+
