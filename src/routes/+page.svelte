@@ -1,31 +1,61 @@
 <script>
-  let dni = '';
-  let password = '';
-  let mensaje = '';
+  import { supabase } from '$lib/supabaseClient';
+  import { goto } from '$app/navigation';
 
-  // Usuarios de prueba (sin API todavía)
-  const usuarios = [
-    { dni: 'archivo.luis.carrillo@gmail.com', password: '12345678Lc', nombre: 'Luis Carrillo' },
-    { dni: 'ana@test.com', password: '1234', nombre: 'Ana Perez' }
-  ];
+  let email = "";
+  let password = "";
+  let message = "";
 
-  const login = () => {
-    const user = usuarios.find(u => u.dni === dni && u.password === password);
+  async function login(e) {
+    e.preventDefault();
+    message = "Procesando...";
 
-    if (user) {
-      mensaje = `✅ Bienvenido ${user.nombre}`;
-    } else {
-      mensaje = '❌ Credenciales inválidas';
+    console.log("🔍 Variables de entorno:");
+    console.log("URL:", import.meta.env.VITE_SUPABASE_URL);
+    console.log("KEY:", import.meta.env.VITE_SUPABASE_ANON_KEY);
+
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+
+      console.log("📩 Respuesta de Supabase:");
+      console.log("Data:", data);
+      console.log("Error:", error);
+
+      if (error) {
+        message = "❌ Credenciales inválidas o error en conexión.";
+      } else {
+        message = "✅ Login exitoso, redirigiendo...";
+        goto("/dashboard"); // Redirige al dashboard
+      }
+    } catch (err) {
+      console.error("⚠️ Error inesperado:", err);
+      message = "⚠️ Error en el login. Revisa consola.";
     }
-  };
+  }
 </script>
 
-<h1>Login Farma (Demo)</h1>
-
-<form on:submit|preventDefault={login}>
-  <input type="text" placeholder="DNI o Correo" bind:value={dni} />
-  <input type="password" placeholder="Contraseña" bind:value={password} />
-  <button type="submit">Ingresar</button>
-</form>
-
-<p>{mensaje}</p>
+<div class="flex items-center justify-center min-h-screen bg-gray-100">
+  <div class="bg-white p-8 rounded-2xl shadow-xl max-w-sm w-full">
+    <h2 class="text-3xl font-bold text-center text-blue-800 mb-6">Ingreso al Sistema</h2>
+    <form on:submit|preventDefault={login} class="space-y-4">
+      <input
+        type="email"
+        bind:value={email}
+        placeholder="Correo Electrónico"
+        class="w-full px-4 py-2 border-2 rounded-lg"
+        required
+      />
+      <input
+        type="password"
+        bind:value={password}
+        placeholder="Contraseña"
+        class="w-full px-4 py-2 border-2 rounded-lg"
+        required
+      />
+      <button type="submit" class="w-full bg-blue-600 text-white font-bold py-2 px-4 rounded-lg">
+        Ingresar
+      </button>
+    </form>
+    <div class="text-center font-bold mt-4">{message}</div>
+  </div>
+</div>
