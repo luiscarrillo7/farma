@@ -1,29 +1,30 @@
 <script>
-  // 1. Recibe la sesión para poder autenticar la petición a la API.
   let { session } = $props();
 
-  // 2. Define la URL de tu API, igual que en el componente de Venta.
   const API_URL = 'https://farmacia-269414280318.europe-west1.run.app';
 
-  // 3. Define el estado reactivo para guardar los datos, el estado de carga y los errores.
   let productos = $state([]);
-  let isLoading = $state(true);
+  let isLoading = $state(false);
   let error = $state(null);
+  let hasFetched = $state(false); // ← NUEVO: Bandera para evitar múltiples fetches
 
-  // 4. Utiliza $effect para cargar los datos cuando el componente se renderiza.
+  // ← OPTIMIZACIÓN: Solo ejecutar UNA VEZ
   $effect(() => {
+    // Si ya cargamos datos, no volver a cargar
+    if (hasFetched) return;
+    
     async function fetchProductos() {
-      // Valida que el token de acceso exista antes de hacer la llamada.
       if (!session?.access_token) {
         error = "No se pudo autenticar la sesión del usuario.";
         isLoading = false;
         return;
       }
 
+      isLoading = true;
+
       try {
         const response = await fetch(`${API_URL}/medicamentos`, {
           headers: {
-            // Envía el token de Supabase a tu API de ASP.NET para la autorización.
             'Authorization': `Bearer ${session.access_token}`
           }
         });
@@ -32,32 +33,58 @@
           throw new Error(`Error ${response.status}: No se pudieron obtener los productos.`);
         }
 
-        // Si la respuesta es exitosa, guarda los productos en el estado.
         productos = await response.json();
+        hasFetched = true; // ← Marcar como cargado
         
       } catch (e) {
-        // Si ocurre cualquier error, guárdalo para mostrarlo en la UI.
         console.error("Error al cargar productos:", e);
         error = e.message;
       } finally {
-        // Al final, indica que la carga ha terminado.
         isLoading = false;
       }
     }
 
-    fetchProductos();
+    // ← OPTIMIZACIÓN: Pequeño delay para evitar race conditions
+    const timeoutId = setTimeout(fetchProductos, 100);
+    
+    return () => clearTimeout(timeoutId); // Cleanup
   });
+
+  // ← NUEVO: Función para refrescar datos manualmente
+  async function refrescarProductos() {
+    hasFetched = false;
+    error = null;
+    productos = [];
+  }
 </script>
 
 <div class="bg-white p-6 rounded-xl shadow-lg w-full max-w-5xl mx-auto">
-  <h2 class="text-2xl font-bold text-gray-800 mb-4 border-b pb-2">
-    📦 Listado de Productos
-  </h2>
+  <div class="flex justify-between items-center mb-4 border-b pb-2">
+    <h2 class="text-2xl font-bold text-gray-800">
+      📦 Listado de Productos
+    </h2>
+    <!-- ← NUEVO: Botón para refrescar -->
+    <button 
+      onclick={refrescarProductos}
+      disabled={isLoading}
+      class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm disabled:opacity-50"
+    >
+      {isLoading ? '⏳ Cargando...' : '🔄 Refrescar'}
+    </button>
+  </div>
 
   {#if isLoading}
     <p class="text-center text-gray-500 py-4">⏳ Cargando productos, por favor espere...</p>
   {:else if error}
-    <p class="text-center text-red-600 bg-red-100 p-4 rounded-lg font-semibold">❌ Error: {error}</p>
+    <div class="text-center">
+      <p class="text-red-600 bg-red-100 p-4 rounded-lg font-semibold mb-4">❌ Error: {error}</p>
+      <button 
+        onclick={refrescarProductos}
+        class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-lg"
+      >
+        Reintentar
+      </button>
+    </div>
   {:else if productos.length === 0}
     <p class="text-center text-gray-600 py-4">📋 No se encontraron productos para mostrar.</p>
   {:else}

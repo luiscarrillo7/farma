@@ -11,6 +11,12 @@
   let items = $state([]);
   let clienteId = $state('');
   let isLoading = $state(false);
+  
+  // NUEVO: Caché para evitar múltiples solicitudes
+  let medicamentosCache = $state(null);
+  let clientesCache = $state(null);
+  let cacheTimestamp = $state(0);
+  const CACHE_DURATION = 5 * 60 * 1000; // 5 minutos
 
   let totalGeneral = $derived(
     items.reduce((sum, item) => {
@@ -23,6 +29,24 @@
   async function loadData() {
     if (!session?.access_token) return;
     
+    const now = Date.now();
+    const cacheIsValid = (now - cacheTimestamp) < CACHE_DURATION;
+    
+    // OPTIMIZACIÓN: Usar caché si está disponible y es válido
+    if (cacheIsValid && medicamentosCache && clientesCache) {
+      medicamentos = medicamentosCache;
+      clientes = clientesCache;
+      
+      if (!medicamentos || medicamentos.length === 0) {
+        alert("No hay medicamentos disponibles para la venta.");
+        close();
+        return;
+      }
+      
+      addItem();
+      return;
+    }
+    
     try {
       const headers = { 'Authorization': `Bearer ${session.access_token}` };
       
@@ -33,6 +57,11 @@
 
       medicamentos = await medRes.json();
       clientes = await clientRes.json();
+      
+      // NUEVO: Guardar en caché
+      medicamentosCache = medicamentos;
+      clientesCache = clientes;
+      cacheTimestamp = Date.now();
 
       if (!medicamentos || medicamentos.length === 0) {
         alert("No hay medicamentos disponibles para la venta.");
@@ -113,6 +142,10 @@
       }
 
       alert(`✅ Venta registrada con éxito!\nID: ${result.venta_id}\nTotal: $${result.total_calculado}`);
+      
+      // NUEVO: Invalidar caché después de una venta exitosa
+      cacheTimestamp = 0;
+      
       close();
     } catch (error) {
       alert(`❌ Error al registrar la venta: ${error.message}`);
