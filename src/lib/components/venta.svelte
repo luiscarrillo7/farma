@@ -1,22 +1,18 @@
 <script>
-  import { createEventDispatcher } from 'svelte';
   import { supabase } from '$lib/supabaseClient';
 
-  // 1. Recibe 'session' y 'open' como propiedades desde el dashboard
-  let { session, open } = $props();
-
-  // 2. Crea un "despachador" para notificar al dashboard cuando debe cerrarse
-  const dispatch = createEventDispatcher();
+  let { session } = $props();
 
   const API_URL = 'https://farmacia-269414280318.europe-west1.run.app';
 
+  let open = $state(false);
   let medicamentos = $state([]);
   let clientes = $state([]);
   let items = $state([]);
   let clienteId = $state('');
   let isLoading = $state(false);
 
-  // Computed: Total general (tu código original)
+  // Computed: Total general
   let totalGeneral = $derived(
     items.reduce((sum, item) => {
       const med = medicamentos.find(m => m.id === item.medicamentoId);
@@ -24,16 +20,6 @@
       return sum + (item.cantidad * precio);
     }, 0)
   );
-
-  // 3. Este $effect se ejecuta cuando la propiedad 'open' cambia a 'true'
-  $effect(() => {
-    if (open) {
-      // Reinicia el estado y carga los datos, igual que hacía tu 'openModal'
-      items = [];
-      clienteId = '';
-      loadData();
-    }
-  });
 
   async function loadData() {
     if (!session?.access_token) return;
@@ -54,8 +40,9 @@
         close();
         return;
       }
-      
-      addItem(); // Añadir primer item por defecto
+
+      // Añadir primer item por defecto
+      addItem();
     } catch (error) {
       alert(`Error al cargar datos: ${error.message}`);
       close();
@@ -136,15 +123,31 @@
     }
   }
 
-  // 4. La función 'close' ahora notifica al dashboard para que cambie el estado
+  function openModal() {
+    open = true;
+    items = [];
+    clienteId = '';
+    loadData();
+  }
+
   function close() {
-    dispatch('close');
+    open = false;
+    items = [];
+    clienteId = '';
   }
 </script>
 
-<!-- 5. El HTML ya no contiene el botón. Solo se renderiza si 'open' es true -->
+<div class="text-center">
+  <button 
+    onclick={openModal}
+    class="bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-6 rounded-lg text-xl"
+  >
+    🛒 Registrar Nueva Venta
+  </button>
+</div>
+
 {#if open}
-  <div class="fixed inset-0 flex items-center justify-center p-4 bg-black/60 z-50">
+  <div class="fixed inset-0 flex items-center justify-center p-4 bg-black/50 z-50">
     <div class="bg-white p-8 rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
       <div class="flex justify-between items-center mb-6">
         <h3 class="text-2xl font-bold text-blue-700">Registrar Venta</h3>
@@ -207,14 +210,14 @@
 
               <input 
                 type="text"
-                value="S/ {getPrecio(item.medicamentoId).toFixed(2)}"
+                value="${getPrecio(item.medicamentoId).toFixed(2)}"
                 disabled
                 class="col-span-2 p-2 border rounded bg-gray-100 text-center"
               />
 
               <input 
                 type="text"
-                value="S/ {getSubtotal(item).toFixed(2)}"
+                value="${getSubtotal(item).toFixed(2)}"
                 disabled
                 class="col-span-2 p-2 border rounded bg-gray-200 text-center"
               />
@@ -241,7 +244,7 @@
         </button>
 
         <div class="text-right font-bold text-xl mt-4">
-          Total General: <span class="text-green-600">S/ {totalGeneral.toFixed(2)}</span>
+          Total General: <span class="text-green-600">${totalGeneral.toFixed(2)}</span>
         </div>
 
         <button 
