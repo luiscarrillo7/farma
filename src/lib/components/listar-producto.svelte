@@ -1,7 +1,52 @@
 <script>
-  // 1. AHORA RECIBE 'productos' COMO UNA PROP DESDE EL DASHBOARD
-  //    Ya no necesita hacer su propio fetch, ni manejar estados de carga o error.
-  let { session, productos } = $props();
+  // 1. Recibe la sesión para poder autenticar la petición a la API.
+  let { session } = $props();
+
+  // 2. Define la URL de tu API, igual que en el componente de Venta.
+  const API_URL = 'https://farmacia-269414280318.europe-west1.run.app';
+
+  // 3. Define el estado reactivo para guardar los datos, el estado de carga y los errores.
+  let productos = $state([]);
+  let isLoading = $state(true);
+  let error = $state(null);
+
+  // 4. Utiliza $effect para cargar los datos cuando el componente se renderiza.
+  $effect(() => {
+    async function fetchProductos() {
+      // Valida que el token de acceso exista antes de hacer la llamada.
+      if (!session?.access_token) {
+        error = "No se pudo autenticar la sesión del usuario.";
+        isLoading = false;
+        return;
+      }
+
+      try {
+        const response = await fetch(`${API_URL}/medicamentos`, {
+          headers: {
+            // Envía el token de Supabase a tu API de ASP.NET para la autorización.
+            'Authorization': `Bearer ${session.access_token}`
+          }
+        });
+
+        if (!response.ok) {
+          throw new Error(`Error ${response.status}: No se pudieron obtener los productos.`);
+        }
+
+        // Si la respuesta es exitosa, guarda los productos en el estado.
+        productos = await response.json();
+        
+      } catch (e) {
+        // Si ocurre cualquier error, guárdalo para mostrarlo en la UI.
+        console.error("Error al cargar productos:", e);
+        error = e.message;
+      } finally {
+        // Al final, indica que la carga ha terminado.
+        isLoading = false;
+      }
+    }
+
+    fetchProductos();
+  });
 </script>
 
 <div class="bg-white p-6 rounded-xl shadow-lg w-full max-w-5xl mx-auto">
@@ -9,7 +54,11 @@
     📦 Listado de Productos
   </h2>
 
-  {#if !productos || productos.length === 0}
+  {#if isLoading}
+    <p class="text-center text-gray-500 py-4">⏳ Cargando productos, por favor espere...</p>
+  {:else if error}
+    <p class="text-center text-red-600 bg-red-100 p-4 rounded-lg font-semibold">❌ Error: {error}</p>
+  {:else if productos.length === 0}
     <p class="text-center text-gray-600 py-4">📋 No se encontraron productos para mostrar.</p>
   {:else}
     <div class="overflow-x-auto">
