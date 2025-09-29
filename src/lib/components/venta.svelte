@@ -137,14 +137,14 @@
   }
 </script>
 
-<main class="p-8 text-center">
+<div class="text-center">
   <button 
     onclick={openModal}
     class="bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-6 rounded-lg text-xl"
   >
     🛒 Registrar Nueva Venta
   </button>
-</main>
+</div>
 
 {#if open}
   <div class="fixed inset-0 flex items-center justify-center p-4 bg-black/50 z-50">
@@ -161,7 +161,6 @@
       </div>
 
       <form onsubmit={submitVenta} class="space-y-4">
-        <!-- Cliente -->
         <select 
           bind:value={clienteId}
           disabled={isLoading}
@@ -175,7 +174,6 @@
           {/each}
         </select>
 
-        <!-- Headers -->
         <div class="grid grid-cols-12 gap-2 mt-4 text-xs font-bold text-gray-600">
           <div class="col-span-5">Producto</div>
           <div class="col-span-2 text-center">Cantidad</div>
@@ -183,11 +181,9 @@
           <div class="col-span-2 text-center">Subtotal</div>
         </div>
 
-        <!-- Items Container -->
         <div class="space-y-2 border-t pt-2">
           {#each items as item (item.id)}
             <div class="grid grid-cols-12 gap-2 items-center">
-              <!-- Medicamento Select -->
               <select 
                 value={item.medicamentoId}
                 onchange={(e) => updateItem(item.id, 'medicamentoId', parseInt(e.target.value))}
@@ -202,7 +198,6 @@
                 {/each}
               </select>
 
-              <!-- Cantidad -->
               <input 
                 type="number"
                 value={item.cantidad}
@@ -213,7 +208,6 @@
                 required
               />
 
-              <!-- Precio Unitario -->
               <input 
                 type="text"
                 value="${getPrecio(item.medicamentoId).toFixed(2)}"
@@ -221,7 +215,6 @@
                 class="col-span-2 p-2 border rounded bg-gray-100 text-center"
               />
 
-              <!-- Subtotal -->
               <input 
                 type="text"
                 value="${getSubtotal(item).toFixed(2)}"
@@ -229,7 +222,6 @@
                 class="col-span-2 p-2 border rounded bg-gray-200 text-center"
               />
 
-              <!-- Remove Button -->
               <button 
                 type="button"
                 onclick={() => removeItem(item.id)}
@@ -242,7 +234,6 @@
           {/each}
         </div>
 
-        <!-- Add Item Button -->
         <button 
           type="button"
           onclick={addItem}
@@ -252,12 +243,10 @@
           ➕ Añadir Producto
         </button>
 
-        <!-- Total General -->
         <div class="text-right font-bold text-xl mt-4">
           Total General: <span class="text-green-600">${totalGeneral.toFixed(2)}</span>
         </div>
 
-        <!-- Submit Button -->
         <button 
           type="submit"
           disabled={isLoading || items.length === 0}
