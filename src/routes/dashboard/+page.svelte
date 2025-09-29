@@ -2,10 +2,14 @@
   import { supabase } from '$lib/supabaseClient';
   import { goto } from '$app/navigation';
   import Venta from '$lib/components/venta.svelte';
-
-  let session = null;
+  import ListarProducto from '$lib/components/listar-producto.svelte';
+  
+  // ANTES: let session = null;
+  // AHORA: Usa $state para hacerlo reactivo
+  let session = $state(null);
 
   supabase.auth.getSession().then(({ data }) => {
+    // Cuando esta línea se ejecute, Svelte ahora sí actualizará los componentes hijos
     session = data.session;
     if (!session) goto('/login');
   });
@@ -21,6 +25,9 @@
   <button on:click={logout} class="bg-red-500 hover:bg-red-600 font-semibold py-2 px-4 rounded-lg">Salir</button>
 </header>
 
-<main class="p-8 text-center">
-  <Venta {session} />
+<main class="p-8 space-y-8">
+  {#if session}
+    <Venta {session} />
+    <ListarProducto {session} />
+  {/if}
 </main>
