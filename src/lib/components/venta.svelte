@@ -12,7 +12,6 @@
   let clienteId = $state('');
   let isLoading = $state(false);
 
-  // Computed: Total general
   let totalGeneral = $derived(
     items.reduce((sum, item) => {
       const med = medicamentos.find(m => m.id === item.medicamentoId);
@@ -41,7 +40,6 @@
         return;
       }
 
-      // Añadir primer item por defecto
       addItem();
     } catch (error) {
       alert(`Error al cargar datos: ${error.message}`);
@@ -137,6 +135,42 @@
   }
 </script>
 
+<svelte:head>
+  <style>
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+      z-index: 9999;
+    }
+    .modal-backdrop {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: rgba(0, 0, 0, 0.5);
+      backdrop-filter: blur(4px);
+    }
+    .modal-content {
+      position: relative;
+      background: white;
+      border-radius: 1rem;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+      max-width: 48rem;
+      width: 100%;
+      max-height: 90vh;
+      overflow: hidden;
+    }
+  </style>
+</svelte:head>
+
 <div class="text-center">
   <button 
     onclick={openModal}
@@ -147,19 +181,16 @@
 </div>
 
 {#if open}
-  <div class="fixed inset-0 flex items-center justify-center p-4 z-50">
-    <!-- Backdrop con blur - CORREGIDO -->
+  <div class="modal-overlay">
     <div 
-      class="absolute inset-0 bg-black/40 backdrop-blur-sm"
+      class="modal-backdrop"
       onclick={close}
       onkeydown={(e) => e.key === 'Escape' && close()}
       role="button"
       tabindex="-1"
     ></div>
     
-    <!-- Modal -->
-    <div class="relative bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-hidden">
-      <!-- Header con color de fondo -->
+    <div class="modal-content">
       <div class="flex justify-between items-center p-6 border-b bg-gradient-to-r from-blue-600 to-blue-700">
         <h3 class="text-2xl font-bold text-white">Registrar Venta</h3>
         <button 
@@ -171,7 +202,6 @@
         </button>
       </div>
 
-      <!-- Contenido scrolleable -->
       <div class="overflow-y-auto max-h-[calc(90vh-80px)] p-6">
         <form onsubmit={submitVenta} class="space-y-6">
           <select 
