@@ -1,4 +1,3 @@
-
 <script>
   import { createEventDispatcher } from 'svelte';
   import { supabase } from '$lib/supabaseClient';
@@ -8,35 +7,37 @@
   let open = false;
   let loading = false;
 
-  // Datos del formulario
+  // Datos del formulario adaptados a tu tabla actual
   let nombre = "";
-  let descripcion = "";
+  let codigoComercial = "";
   let presentacion = "";
-  let precioCompra = null;
+  let concentracion = "";
+  let categoria = "";
   let precioVenta = null;
-  let stockMinimo = 0;
-  let requiereReceta = false;
 
-  // Estados de validación
   let errorMessage = "";
   let showToast = false;
   let toastMessage = "";
-  let toastType = "success"; // "success" | "error"
+  let toastType = "success";
 
-  // Validación reactiva de precios
-  $: precioValido = precioVenta > precioCompra;
-  $: margen = precioVenta && precioCompra && precioCompra > 0
-    ? ((precioVenta - precioCompra) / precioCompra * 100).toFixed(2)
-    : 0;
+  // Categorías comunes
+  const categorias = [
+    "Analgésico",
+    "Antibiótico",
+    "Antiinflamatorio",
+    "Antihistamínico",
+    "Antihipertensivo",
+    "Vitaminas",
+    "Otros"
+  ];
 
   function resetForm() {
     nombre = "";
-    descripcion = "";
+    codigoComercial = "";
     presentacion = "";
-    precioCompra = null;
+    concentracion = "";
+    categoria = "";
     precioVenta = null;
-    stockMinimo = 0;
-    requiereReceta = false;
     errorMessage = "";
   }
 
@@ -60,29 +61,14 @@
     event.preventDefault();
     errorMessage = "";
 
-    // Validaciones del lado del cliente
-    if (!nombre || !precioCompra || !precioVenta) {
-      errorMessage = "Por favor, complete los campos obligatorios: Nombre, Precio de Compra y Precio de Venta.";
+    // Validaciones
+    if (!nombre || !precioVenta) {
+      errorMessage = "El nombre y precio de venta son obligatorios";
       return;
     }
 
-    if (precioCompra <= 0 || precioVenta <= 0) {
-      errorMessage = "Los precios deben ser mayores a 0";
-      return;
-    }
-
-    if (precioVenta <= precioCompra) {
-      errorMessage = "El precio de venta debe ser mayor al precio de compra";
-      return;
-    }
-
-    if (nombre.length > 100) {
-      errorMessage = "El nombre no puede exceder 100 caracteres";
-      return;
-    }
-
-    if (presentacion && presentacion.length > 50) {
-      errorMessage = "La presentación no puede exceder 50 caracteres";
+    if (precioVenta <= 0) {
+      errorMessage = "El precio debe ser mayor a 0";
       return;
     }
 
@@ -101,64 +87,37 @@
 
       const token = currentSession.access_token;
 
-      // Realizar petición a la API
-      const response = await fetch("https://farmacia-269414280318.europe-west1.run.app/medicamentos", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          nombre: nombre.trim(),
-          descripcion: descripcion?.trim() || null,
-          presentacion: presentacion?.trim() || null,
-          precioCompra: parseFloat(precioCompra),
-          precioVenta: parseFloat(precioVenta),
-          stockMinimo: parseInt(stockMinimo) || 0,
-          requiereReceta: requiereReceta
-        })
-      });
-
-      if (response.ok) {
-        // Parsear la respuesta
-        const textResponse = await response.text();
-        let newMedicamento = null;
-        
-        try {
-          if (textResponse) {
-            const parsed = JSON.parse(textResponse);
-            // Si es un array, tomar el primer elemento
-            newMedicamento = Array.isArray(parsed) ? parsed[0] : parsed;
+      // Insertar directamente en Supabase (más confiable que tu API para este caso)
+      const { data, error } = await supabase
+        .from('medicamentos')
+        .insert([
+          {
+            nombre: nombre.trim(),
+            codigo_comercial: codigoComercial?.trim() || null,
+            presentacion: presentacion?.trim() || null,
+            concentracion: concentracion?.trim() || null,
+            categoria: categoria || null,
+            precio_venta: parseFloat(precioVenta)
           }
-        } catch (e) {
-          console.log("Respuesta no JSON, pero operación exitosa");
-        }
+        ])
+        .select();
 
-        showToastMessage("✅ Medicamento agregado con éxito", "success");
-        
-        // Emitir evento para actualizar la lista sin recargar
-        dispatch('medicamentoAgregado', newMedicamento);
-        
-        close();
+      if (error) {
+        console.error('Error de Supabase:', error);
+        errorMessage = error.message || "Error al guardar el medicamento";
       } else {
-        // Manejo de errores del servidor
-        const textResponse = await response.text();
-        try {
-          const error = JSON.parse(textResponse);
-          errorMessage = error.detail || error.title || "Error al guardar el medicamento";
-        } catch (e) {
-          errorMessage = `Error del servidor (código ${response.status}): ${textResponse || "Sin detalles adicionales."}`;
-        }
+        showToastMessage("✅ Medicamento agregado con éxito", "success");
+        dispatch('medicamentoAgregado', data[0]);
+        close();
       }
     } catch (error) {
       console.error("Error en la petición:", error);
-      errorMessage = "Error de conexión. Verifique su conexión a internet e intente nuevamente.";
+      errorMessage = "Error de conexión. Verifique su conexión a internet.";
     } finally {
       loading = false;
     }
   }
 
-  // Cerrar con tecla Escape
   function handleKeydown(e) {
     if (e.key === 'Escape' && open && !loading) {
       close();
@@ -232,14 +191,14 @@
   </style>
 </svelte:head>
 
-<!-- Toast de notificaciones -->
+<!-- Toast -->
 {#if showToast}
   <div class="toast {toastType}">
     <p class="font-semibold">{toastMessage}</p>
   </div>
 {/if}
 
-<!-- Botón para abrir el modal -->
+<!-- Botón -->
 <button
   on:click={() => (open = true)}
   class="bg-purple-600 text-white font-semibold px-4 py-2 rounded-lg shadow hover:bg-purple-700 transition duration-200 flex items-center gap-2"
@@ -281,7 +240,7 @@
 
       <form on:submit={agregarMedicamento} class="p-6 space-y-4 overflow-y-auto" style="max-height: calc(90vh - 130px);">
         
-        <!-- Mensaje de error global -->
+        <!-- Error message -->
         {#if errorMessage}
           <div class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md flex items-start gap-2">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 flex-shrink-0 mt-0.5" viewBox="0 0 20 20" fill="currentColor">
@@ -291,7 +250,7 @@
           </div>
         {/if}
 
-        <!-- Nombre del Medicamento -->
+        <!-- Nombre -->
         <div>
           <label for="nombre" class="block text-sm font-medium text-gray-700 mb-1">
             Nombre del Medicamento <span class="text-red-500">*</span>
@@ -300,28 +259,42 @@
             id="nombre" 
             type="text" 
             required 
-            maxlength="100"
             bind:value={nombre} 
             disabled={loading}
-            class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 disabled:bg-gray-100 disabled:cursor-not-allowed" 
-            placeholder="Ej: Paracetamol 500mg" 
+            class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 disabled:bg-gray-100" 
+            placeholder="Ej: Paracetamol" 
           />
-          <p class="text-xs text-gray-500 mt-1">{nombre.length}/100 caracteres</p>
         </div>
 
-        <!-- Descripción -->
-        <div>
-          <label for="descripcion" class="block text-sm font-medium text-gray-700 mb-1">
-            Descripción
-          </label>
-          <textarea 
-            id="descripcion" 
-            rows="3" 
-            bind:value={descripcion} 
-            disabled={loading}
-            class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 disabled:bg-gray-100 disabled:cursor-not-allowed" 
-            placeholder="Ej: Analgésico y antipirético para el alivio del dolor y fiebre"
-          ></textarea>
+        <!-- Código Comercial y Concentración -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label for="codigoComercial" class="block text-sm font-medium text-gray-700 mb-1">
+              Código Comercial
+            </label>
+            <input 
+              id="codigoComercial" 
+              type="text" 
+              bind:value={codigoComercial} 
+              disabled={loading}
+              class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 disabled:bg-gray-100" 
+              placeholder="Ej: MED-001" 
+            />
+          </div>
+
+          <div>
+            <label for="concentracion" class="block text-sm font-medium text-gray-700 mb-1">
+              Concentración
+            </label>
+            <input 
+              id="concentracion" 
+              type="text" 
+              bind:value={concentracion} 
+              disabled={loading}
+              class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 disabled:bg-gray-100" 
+              placeholder="Ej: 500mg" 
+            />
+          </div>
         </div>
 
         <!-- Presentación -->
@@ -332,35 +305,32 @@
           <input 
             id="presentacion" 
             type="text" 
-            maxlength="50"
             bind:value={presentacion} 
             disabled={loading}
-            class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 disabled:bg-gray-100 disabled:cursor-not-allowed" 
-            placeholder="Ej: Caja de 20 tabletas" 
+            class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 disabled:bg-gray-100" 
+            placeholder="Ej: Tableta, Cápsula, Jarabe" 
           />
-          {#if presentacion}
-            <p class="text-xs text-gray-500 mt-1">{presentacion.length}/50 caracteres</p>
-          {/if}
         </div>
 
-        <!-- Precios -->
+        <!-- Categoría y Precio -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label for="precioCompra" class="block text-sm font-medium text-gray-700 mb-1">
-              Precio Compra (S/) <span class="text-red-500">*</span>
+            <label for="categoria" class="block text-sm font-medium text-gray-700 mb-1">
+              Categoría
             </label>
-            <input 
-              id="precioCompra" 
-              type="number" 
-              step="0.01" 
-              min="0.01" 
-              required 
-              bind:value={precioCompra} 
+            <select 
+              id="categoria" 
+              bind:value={categoria} 
               disabled={loading}
-              class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 disabled:bg-gray-100 disabled:cursor-not-allowed" 
-              placeholder="10.50" 
-            />
+              class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 disabled:bg-gray-100"
+            >
+              <option value="">Seleccione una categoría</option>
+              {#each categorias as cat}
+                <option value={cat}>{cat}</option>
+              {/each}
+            </select>
           </div>
+
           <div>
             <label for="precioVenta" class="block text-sm font-medium text-gray-700 mb-1">
               Precio Venta (S/) <span class="text-red-500">*</span>
@@ -373,62 +343,13 @@
               required 
               bind:value={precioVenta} 
               disabled={loading}
-              class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 disabled:bg-gray-100 disabled:cursor-not-allowed" 
+              class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 disabled:bg-gray-100" 
               placeholder="15.00" 
             />
           </div>
         </div>
-
-        <!-- Indicador de margen de ganancia -->
-        {#if precioCompra && precioVenta && precioCompra > 0}
-          <div class="bg-gray-50 border border-gray-200 rounded-md p-3">
-            <div class="flex items-center justify-between">
-              <span class="text-sm font-medium text-gray-700">Margen de ganancia:</span>
-              <span class="text-lg font-bold {precioValido ? 'text-green-600' : 'text-red-600'}">
-                {#if precioValido}
-                  +{margen}%
-                {:else}
-                  ⚠️ Precio inválido
-                {/if}
-              </span>
-            </div>
-            {#if !precioValido}
-              <p class="text-xs text-red-600 mt-1">El precio de venta debe ser mayor al de compra</p>
-            {/if}
-          </div>
-        {/if}
         
-        <!-- Stock Mínimo y Requiere Receta -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
-          <div>
-            <label for="stockMinimo" class="block text-sm font-medium text-gray-700 mb-1">
-              Stock Mínimo
-            </label>
-            <input 
-              id="stockMinimo" 
-              type="number" 
-              min="0" 
-              bind:value={stockMinimo} 
-              disabled={loading}
-              class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 disabled:bg-gray-100 disabled:cursor-not-allowed" 
-              placeholder="10" 
-            />
-            <p class="text-xs text-gray-500 mt-1">Nivel de alerta para reabastecimiento</p>
-          </div>
-          <div class="pt-6">
-            <label class="flex items-center gap-2 text-sm font-medium text-gray-700 cursor-pointer">
-              <input 
-                type="checkbox" 
-                bind:checked={requiereReceta} 
-                disabled={loading}
-                class="rounded border-gray-300 text-purple-600 shadow-sm focus:border-purple-300 focus:ring focus:ring-purple-200 focus:ring-opacity-50 disabled:opacity-50 disabled:cursor-not-allowed" 
-              />
-              <span>Requiere Receta Médica</span>
-            </label>
-          </div>
-        </div>
-        
-        <!-- Botones de acción -->
+        <!-- Botones -->
         <div class="flex justify-end gap-3 pt-4 mt-4 border-t">
           <button 
             type="button" 
@@ -440,7 +361,7 @@
           </button>
           <button 
             type="submit" 
-            disabled={loading || !precioValido}
+            disabled={loading}
             class="px-4 py-2 rounded-md bg-purple-600 text-white hover:bg-purple-700 font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
           >
             {#if loading}
