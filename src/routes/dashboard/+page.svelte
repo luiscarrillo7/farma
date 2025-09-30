@@ -19,7 +19,9 @@
   function irInventario() {
     goto('/inventario');
   }
-  
+  function irMedicamentos() {
+    goto('/inventario');
+  }
 </script>
 
 <div class="min-h-screen bg-gray-50">
@@ -33,7 +35,7 @@
         Inventario
       </button>
       <button 
-        onclick={irInventario} 
+        onclick={irMedicamentos} 
         class="bg-green-500 hover:bg-green-600 font-semibold py-2 px-4 rounded-lg">
         Medicamentos
       </button>
