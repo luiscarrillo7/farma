@@ -23,7 +23,7 @@
 
 <div class="min-h-screen bg-gray-50">
   <header class="bg-blue-800 text-white p-4 shadow-lg flex justify-between items-center">
-    <h1 class="text-2xl font-bold">Medicamentos</h1>
+    <h1 class="text-2xl font-bold">Inventario</h1>
 
     <div class="flex gap-4">
       <button 
@@ -42,7 +42,8 @@
 
   <main class="p-8 space-y-8">
     {#if session}
-      <p>hola mundo</p>
+      <IngresoMedicamento {session} />
+      <ListarLotes {session} />
     {/if}
   </main>
 </div>
