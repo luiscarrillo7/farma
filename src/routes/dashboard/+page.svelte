@@ -20,7 +20,7 @@
     goto('/inventario');
   }
   function irMedicamentos() {
-    goto('/inventario');
+    goto('/medicamentos');
   }
 </script>
 
