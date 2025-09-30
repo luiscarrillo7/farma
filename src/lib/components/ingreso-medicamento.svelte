@@ -1,161 +1,77 @@
 <script>
-  import { createEventDispatcher } from 'svelte';
-  import { supabase } from '$lib/supabaseClient';
-
-  const dispatch = createEventDispatcher();
+  import { onMount } from 'svelte';
+  // Ya no se necesita supabase aquí porque el endpoint es público
+  // import { supabase } from '$lib/supabaseClient';
 
   let open = false;
-  let loading = false;
 
-  // Datos del formulario adaptados a tu estructura
+  // Datos del formulario para un nuevo medicamento
   let nombre = "";
-  let codigoComercial = "";
+  let descripcion = "";
   let presentacion = "";
-  let concentracion = "";
-  let categoria = "";
+  let precioCompra = null;
   let precioVenta = null;
-
-  let errorMessage = "";
-  let showToast = false;
-  let toastMessage = "";
-  let toastType = "success";
-
-  // Categorías comunes
-  const categorias = [
-    "Analgésico",
-    "Antibiótico",
-    "Antiinflamatorio",
-    "Antihistamínico",
-    "Antihipertensivo",
-    "Vitaminas",
-    "Otros"
-  ];
+  let stockMinimo = 0;
+  let requiereReceta = false;
 
   function resetForm() {
     nombre = "";
-    codigoComercial = "";
+    descripcion = "";
     presentacion = "";
-    concentracion = "";
-    categoria = "";
+    precioCompra = null;
     precioVenta = null;
-    errorMessage = "";
+    stockMinimo = 0;
+    requiereReceta = false;
   }
 
   function close() {
-    if (!loading) {
-      open = false;
-      resetForm();
-    }
-  }
-
-  function showToastMessage(message, type = "success") {
-    toastMessage = message;
-    toastType = type;
-    showToast = true;
-    setTimeout(() => {
-      showToast = false;
-    }, 3000);
+    open = false;
+    resetForm();
   }
 
   async function agregarMedicamento(event) {
     event.preventDefault();
-    errorMessage = "";
 
-    // Validaciones
-    if (!nombre || !precioVenta) {
-      errorMessage = "El nombre y precio de venta son obligatorios";
+    if (!nombre || !precioCompra || !precioVenta) {
+      alert("Por favor, complete los campos obligatorios: Nombre, Precio de Compra y Precio de Venta.");
       return;
     }
 
-    if (precioVenta <= 0) {
-      errorMessage = "El precio debe ser mayor a 0";
-      return;
-    }
+    // --- CÓDIGO DE AUTENTICACIÓN ELIMINADO ---
+    // Ya no es necesario obtener el token
 
-    loading = true;
+    const response = await fetch("https://farmacia-269414280318.europe-west1.run.app/medicamentos", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        // La cabecera "Authorization" ya no es necesaria
+      },
+      body: JSON.stringify({
+        nombre: nombre,
+        descripcion: descripcion,
+        presentacion: presentacion,
+        precioCompra: precioCompra,
+        precioVenta: precioVenta,
+        stockMinimo: stockMinimo,
+        requiereReceta: requiereReceta
+      })
+    });
 
-    try {
-      // Obtener sesión actualizada
-      const { data: { session: currentSession }, error: sessionError } = 
-        await supabase.auth.getSession();
-
-      if (sessionError || !currentSession) {
-        errorMessage = "Error de autenticación. Por favor, inicie sesión nuevamente.";
-        loading = false;
-        return;
-      }
-
-      const token = currentSession.access_token;
-
-      // Payload ajustado a la API
-      const payload = {
-        nombre: nombre.trim(),
-        codigoComercial: codigoComercial?.trim() || null,
-        presentacion: presentacion?.trim() || null,
-        concentracion: concentracion?.trim() || null,
-        categoria: categoria || null,
-        precioVenta: parseFloat(precioVenta)
-      };
-
-      console.log('📦 Enviando payload:', payload);
-
-      // Realizar petición a la API
-      const response = await fetch("https://farmacia-269414280318.europe-west1.run.app/medicamentos", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
-        },
-        body: JSON.stringify(payload)
-      });
-
-      console.log('📊 Response status:', response.status);
-
-      if (response.ok) {
-        const textResponse = await response.text();
-        console.log('✅ Response:', textResponse);
-        
-        let newMedicamento = null;
-        try {
-          if (textResponse) {
-            const parsed = JSON.parse(textResponse);
-            newMedicamento = Array.isArray(parsed) ? parsed[0] : parsed;
-          }
-        } catch (e) {
-          console.log("Respuesta exitosa pero no JSON");
-        }
-
-        showToastMessage("✅ Medicamento agregado con éxito", "success");
-        dispatch('medicamentoAgregado', newMedicamento);
-        close();
-      } else {
-        // Manejo de errores
-        const textResponse = await response.text();
-        console.error('❌ Error response:', textResponse);
-        
-        try {
-          const error = JSON.parse(textResponse);
-          errorMessage = error.error || error.detail || error.title || "Error al guardar el medicamento";
-        } catch (e) {
-          errorMessage = `Error del servidor (${response.status}): ${textResponse || "Sin detalles"}`;
-        }
-      }
-    } catch (error) {
-      console.error("❌ Error en la petición:", error);
-      errorMessage = "Error de conexión. Verifique su conexión a internet.";
-    } finally {
-      loading = false;
-    }
-  }
-
-  function handleKeydown(e) {
-    if (e.key === 'Escape' && open && !loading) {
+    if (response.ok) {
+      alert("✅ Medicamento agregado con éxito");
       close();
+      location.reload();
+    } else {
+        const textResponse = await response.text();
+        try {
+            const error = JSON.parse(textResponse);
+            alert("❌ Error: " + (error.detail || "Error al guardar el medicamento"));
+        } catch (e) {
+            alert(`❌ Error del servidor (código ${response.status}): ${textResponse || "Sin detalles adicionales."}`);
+        }
     }
   }
 </script>
-
-<svelte:window on:keydown={handleKeydown} />
 
 <svelte:head>
   <style>
@@ -186,58 +102,19 @@
       border-radius: 0.75rem;
       box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
       width: 100%;
-      max-width: 36rem;
+      max-width: 36rem; /* 576px */
       max-height: 90vh;
       overflow: hidden;
-    }
-    .toast {
-      position: fixed;
-      top: 1rem;
-      right: 1rem;
-      z-index: 10000;
-      padding: 1rem 1.5rem;
-      border-radius: 0.5rem;
-      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-      animation: slideIn 0.3s ease-out;
-      font-weight: 600;
-    }
-    @keyframes slideIn {
-      from {
-        transform: translateX(100%);
-        opacity: 0;
-      }
-      to {
-        transform: translateX(0);
-        opacity: 1;
-      }
-    }
-    .toast.success {
-      background-color: #10b981;
-      color: white;
-    }
-    .toast.error {
-      background-color: #ef4444;
-      color: white;
     }
   </style>
 </svelte:head>
 
-<!-- Toast -->
-{#if showToast}
-  <div class="toast {toastType}">
-    {toastMessage}
-  </div>
-{/if}
-
-<!-- Botón -->
+<!-- Botón para abrir el modal -->
 <button
   on:click={() => (open = true)}
-  class="bg-purple-600 text-white font-semibold px-4 py-2 rounded-lg shadow hover:bg-purple-700 transition duration-200 flex items-center gap-2"
+  class="bg-purple-600 text-white font-semibold px-4 py-2 rounded-lg shadow hover:bg-purple-700 transition duration-200"
 >
-  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-    <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" />
-  </svg>
-  Agregar Medicamento
+  + Agregar Medicamento
 </button>
 
 {#if open}
@@ -245,168 +122,68 @@
     <div 
       class="modal-backdrop"
       on:click={close}
-      on:keydown={(e) => { if (e.key === 'Enter') close() }}
+      on:keydown={(e) => { if (e.key === 'Enter' || e.key === 'Escape') close() }}
       role="button"
       tabindex="-1"
-      aria-label="Cerrar modal"
     ></div>
     
     <div class="modal-content">
-      <div class="flex justify-between items-center p-4 border-b bg-gradient-to-r from-purple-50 to-purple-100">
-        <div>
-          <h2 class="text-xl font-bold text-gray-800">Registrar Nuevo Medicamento</h2>
-          <p class="text-sm text-gray-600">Complete la información del medicamento</p>
-        </div>
-        <button 
-          on:click={close} 
-          disabled={loading}
-          aria-label="Cerrar" 
-          class="text-gray-400 hover:text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition"
-        >
+      <div class="flex justify-between items-center p-4 border-b">
+        <h2 class="text-xl font-bold text-gray-800">Registrar Nuevo Medicamento</h2>
+        <button on:click={close} aria-label="Cerrar" class="text-gray-400 hover:text-gray-600">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
           </svg>
         </button>
       </div>
 
-      <form on:submit={agregarMedicamento} class="p-6 space-y-4 overflow-y-auto" style="max-height: calc(90vh - 130px);">
+      <form on:submit={agregarMedicamento} class="p-6 space-y-4 overflow-y-auto" style="max-height: calc(90vh - 65px);">
         
-        <!-- Error message -->
-        {#if errorMessage}
-          <div class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md flex items-start gap-2">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 flex-shrink-0 mt-0.5" viewBox="0 0 20 20" fill="currentColor">
-              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
-            </svg>
-            <span class="text-sm">{errorMessage}</span>
-          </div>
-        {/if}
-
-        <!-- Nombre -->
         <div>
-          <label for="nombre" class="block text-sm font-medium text-gray-700 mb-1">
-            Nombre del Medicamento <span class="text-red-500">*</span>
-          </label>
-          <input 
-            id="nombre" 
-            type="text" 
-            required 
-            bind:value={nombre} 
-            disabled={loading}
-            class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 disabled:bg-gray-100 disabled:cursor-not-allowed" 
-            placeholder="Ej: Paracetamol" 
-          />
+          <label for="nombre" class="block text-sm font-medium text-gray-700 mb-1">Nombre del Medicamento</label>
+          <input id="nombre" type="text" required bind:value={nombre} class="w-full border-gray-300 rounded-md shadow-sm focus:ring-purple-500 focus:border-purple-500" placeholder="Ej: Paracetamol 500mg" />
         </div>
 
-        <!-- Código Comercial y Concentración -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label for="codigoComercial" class="block text-sm font-medium text-gray-700 mb-1">
-              Código Comercial
-            </label>
-            <input 
-              id="codigoComercial" 
-              type="text" 
-              bind:value={codigoComercial} 
-              disabled={loading}
-              class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 disabled:bg-gray-100 disabled:cursor-not-allowed" 
-              placeholder="Ej: MED-001" 
-            />
-          </div>
-
-          <div>
-            <label for="concentracion" class="block text-sm font-medium text-gray-700 mb-1">
-              Concentración
-            </label>
-            <input 
-              id="concentracion" 
-              type="text" 
-              bind:value={concentracion} 
-              disabled={loading}
-              class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 disabled:bg-gray-100 disabled:cursor-not-allowed" 
-              placeholder="Ej: 500mg" 
-            />
-          </div>
-        </div>
-
-        <!-- Presentación -->
         <div>
-          <label for="presentacion" class="block text-sm font-medium text-gray-700 mb-1">
-            Presentación
-          </label>
-          <input 
-            id="presentacion" 
-            type="text" 
-            bind:value={presentacion} 
-            disabled={loading}
-            class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 disabled:bg-gray-100 disabled:cursor-not-allowed" 
-            placeholder="Ej: Tableta, Cápsula, Jarabe" 
-          />
+            <label for="descripcion" class="block text-sm font-medium text-gray-700 mb-1">Descripción</label>
+            <textarea id="descripcion" rows="3" bind:value={descripcion} class="w-full border-gray-300 rounded-md shadow-sm focus:ring-purple-500 focus:border-purple-500" placeholder="Ej: Analgésico y antipirético"></textarea>
         </div>
 
-        <!-- Categoría y Precio -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label for="categoria" class="block text-sm font-medium text-gray-700 mb-1">
-              Categoría
-            </label>
-            <select 
-              id="categoria" 
-              bind:value={categoria} 
-              disabled={loading}
-              class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
-            >
-              <option value="">Seleccione una categoría</option>
-              {#each categorias as cat}
-                <option value={cat}>{cat}</option>
-              {/each}
-            </select>
-          </div>
+        <div>
+            <label for="presentacion" class="block text-sm font-medium text-gray-700 mb-1">Presentación</label>
+            <input id="presentacion" type="text" bind:value={presentacion} class="w-full border-gray-300 rounded-md shadow-sm focus:ring-purple-500 focus:border-purple-500" placeholder="Ej: Caja de 20 tabletas" />
+        </div>
 
-          <div>
-            <label for="precioVenta" class="block text-sm font-medium text-gray-700 mb-1">
-              Precio Venta (S/) <span class="text-red-500">*</span>
-            </label>
-            <input 
-              id="precioVenta" 
-              type="number" 
-              step="0.01" 
-              min="0.01" 
-              required 
-              bind:value={precioVenta} 
-              disabled={loading}
-              class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 disabled:bg-gray-100 disabled:cursor-not-allowed" 
-              placeholder="15.00" 
-            />
-          </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+                <label for="precioCompra" class="block text-sm font-medium text-gray-700 mb-1">Precio Compra (S/)</label>
+                <input id="precioCompra" type="number" step="0.01" min="0" required bind:value={precioCompra} class="w-full border-gray-300 rounded-md shadow-sm focus:ring-purple-500 focus:border-purple-500" placeholder="Ej: 10.50" />
+            </div>
+            <div>
+                <label for="precioVenta" class="block text-sm font-medium text-gray-700 mb-1">Precio Venta (S/)</label>
+                <input id="precioVenta" type="number" step="0.01" min="0" required bind:value={precioVenta} class="w-full border-gray-300 rounded-md shadow-sm focus:ring-purple-500 focus:border-purple-500" placeholder="Ej: 15.00" />
+            </div>
         </div>
         
-        <!-- Botones -->
-        <div class="flex justify-end gap-3 pt-4 mt-4 border-t">
-          <button 
-            type="button" 
-            on:click={close} 
-            disabled={loading}
-            class="px-4 py-2 rounded-md bg-gray-200 text-gray-800 hover:bg-gray-300 font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed"
-          >
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
+            <div>
+                <label for="stockMinimo" class="block text-sm font-medium text-gray-700 mb-1">Stock Mínimo</label>
+                <input id="stockMinimo" type="number" min="0" required bind:value={stockMinimo} class="w-full border-gray-300 rounded-md shadow-sm focus:ring-purple-500 focus:border-purple-500" placeholder="Ej: 10" />
+            </div>
+            <div class="pt-6">
+                <label class="flex items-center gap-2 text-sm font-medium text-gray-700">
+                    <input type="checkbox" bind:checked={requiereReceta} class="rounded border-gray-300 text-purple-600 shadow-sm focus:border-purple-300 focus:ring focus:ring-purple-200 focus:ring-opacity-50" />
+                    Requiere Receta Médica
+                </label>
+            </div>
+        </div>
+        
+        <div class="flex justify-end gap-4 pt-4 mt-4 border-t">
+          <button type="button" on:click={close} class="px-4 py-2 rounded-md bg-gray-200 text-gray-800 hover:bg-gray-300 font-semibold">
             Cancelar
           </button>
-          <button 
-            type="submit" 
-            disabled={loading}
-            class="px-4 py-2 rounded-md bg-purple-600 text-white hover:bg-purple-700 font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-          >
-            {#if loading}
-              <svg class="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
-              Guardando...
-            {:else}
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
-              </svg>
-              Guardar Medicamento
-            {/if}
+          <button type="submit" class="px-4 py-2 rounded-md bg-purple-600 text-white hover:bg-purple-700 font-semibold">
+            Guardar Medicamento
           </button>
         </div>
       </form>
