@@ -32,6 +32,11 @@
         class="bg-green-500 hover:bg-green-600 font-semibold py-2 px-4 rounded-lg">
         Inventario
       </button>
+      <button 
+        onclick={irInventario} 
+        class="bg-green-500 hover:bg-green-600 font-semibold py-2 px-4 rounded-lg">
+        Medicamentos
+      </button>
 
       <button 
         onclick={logout} 
