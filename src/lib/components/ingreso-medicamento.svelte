@@ -1,8 +1,9 @@
 <script>
   import { onMount } from 'svelte';
+  // CORRECCIÓN: Importamos supabase para poder obtener la sesión más reciente
+  import { supabase } from '$lib/supabaseClient';
 
-  // Se asume que la sesión se pasará como prop desde la página principal
-  export let session;
+  // La prop 'session' se ha eliminado ya que obtenemos la sesión actualizada directamente.
 
   let open = false;
 
@@ -38,11 +39,17 @@
       return;
     }
 
-    const token = session?.access_token;
-    if (!token) {
-        alert("Error de autenticación. No se pudo obtener el token.");
+    // --- CORRECCIÓN CLAVE ---
+    // Obtenemos la sesión más reciente para asegurar que el token no haya expirado.
+    const { data: { session: currentSession }, error: sessionError } = await supabase.auth.getSession();
+
+    if (sessionError || !currentSession) {
+        alert("Error de autenticación. No se pudo obtener la sesión actual.");
         return;
     }
+
+    const token = currentSession.access_token;
+    // --- FIN DE LA CORRECCIÓN ---
 
     const response = await fetch("https://farmacia-269414280318.europe-west1.run.app/medicamentos", {
       method: "POST",
@@ -66,8 +73,14 @@
       close();
       location.reload(); // Recarga la página para mostrar el nuevo medicamento en la lista
     } else {
-      const error = await response.json();
-      alert("❌ Error: " + (error.detail || "Error al guardar el medicamento"));
+        // Manejo de error mejorado para el caso de JSON vacío
+        const textResponse = await response.text();
+        try {
+            const error = JSON.parse(textResponse);
+            alert("❌ Error: " + (error.detail || "Error al guardar el medicamento"));
+        } catch (e) {
+            alert(`❌ Error del servidor (código ${response.status}): ${textResponse || "Sin detalles adicionales."}`);
+        }
     }
   }
 </script>
@@ -189,4 +202,3 @@
     </div>
   </div>
 {/if}
-
