@@ -5,23 +5,21 @@
 
   let open = false;
 
-  // Datos del formulario para un nuevo medicamento
+  // Datos del formulario adaptados a tu base de datos
   let nombre = "";
-  let descripcion = "";
+  let codigoComercial = "";
+  let concentracion = "";
   let presentacion = "";
-  let precioCompra = null;
+  let categoria = "";
   let precioVenta = null;
-  let stockMinimo = 0;
-  let requiereReceta = false;
 
   function resetForm() {
     nombre = "";
-    descripcion = "";
+    codigoComercial = "";
+    concentracion = "";
     presentacion = "";
-    precioCompra = null;
+    categoria = "";
     precioVenta = null;
-    stockMinimo = 0;
-    requiereReceta = false;
   }
 
   function close() {
@@ -32,28 +30,24 @@
   async function agregarMedicamento(event) {
     event.preventDefault();
 
-    if (!nombre || !precioCompra || !precioVenta) {
-      alert("Por favor, complete los campos obligatorios: Nombre, Precio de Compra y Precio de Venta.");
+    if (!nombre || !precioVenta) {
+      alert("Por favor, complete los campos obligatorios: Nombre y Precio de Venta.");
       return;
     }
-
-    // --- CÓDIGO DE AUTENTICACIÓN ELIMINADO ---
-    // Ya no es necesario obtener el token
 
     const response = await fetch("https://farmacia-269414280318.europe-west1.run.app/medicamentos", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        // La cabecera "Authorization" ya no es necesaria
       },
       body: JSON.stringify({
+        // Payload corregido para coincidir con tu API y BD
         nombre: nombre,
-        descripcion: descripcion,
+        codigoComercial: codigoComercial,
+        concentracion: concentracion,
         presentacion: presentacion,
-        precioCompra: precioCompra,
+        categoria: categoria,
         precioVenta: precioVenta,
-        stockMinimo: stockMinimo,
-        requiereReceta: requiereReceta
       })
     });
 
@@ -140,42 +134,35 @@
       <form on:submit={agregarMedicamento} class="p-6 space-y-4 overflow-y-auto" style="max-height: calc(90vh - 65px);">
         
         <div>
-          <label for="nombre" class="block text-sm font-medium text-gray-700 mb-1">Nombre del Medicamento</label>
-          <input id="nombre" type="text" required bind:value={nombre} class="w-full border-gray-300 rounded-md shadow-sm focus:ring-purple-500 focus:border-purple-500" placeholder="Ej: Paracetamol 500mg" />
-        </div>
-
-        <div>
-            <label for="descripcion" class="block text-sm font-medium text-gray-700 mb-1">Descripción</label>
-            <textarea id="descripcion" rows="3" bind:value={descripcion} class="w-full border-gray-300 rounded-md shadow-sm focus:ring-purple-500 focus:border-purple-500" placeholder="Ej: Analgésico y antipirético"></textarea>
-        </div>
-
-        <div>
-            <label for="presentacion" class="block text-sm font-medium text-gray-700 mb-1">Presentación</label>
-            <input id="presentacion" type="text" bind:value={presentacion} class="w-full border-gray-300 rounded-md shadow-sm focus:ring-purple-500 focus:border-purple-500" placeholder="Ej: Caja de 20 tabletas" />
+          <label for="nombre" class="block text-sm font-medium text-gray-700 mb-1">Nombre del Medicamento <span class="text-red-500">*</span></label>
+          <input id="nombre" type="text" required bind:value={nombre} class="w-full border-gray-300 rounded-md shadow-sm focus:ring-purple-500 focus:border-purple-500" placeholder="Ej: Paracetamol" />
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-                <label for="precioCompra" class="block text-sm font-medium text-gray-700 mb-1">Precio Compra (S/)</label>
-                <input id="precioCompra" type="number" step="0.01" min="0" required bind:value={precioCompra} class="w-full border-gray-300 rounded-md shadow-sm focus:ring-purple-500 focus:border-purple-500" placeholder="Ej: 10.50" />
+                <label for="codigoComercial" class="block text-sm font-medium text-gray-700 mb-1">Código Comercial</label>
+                <input id="codigoComercial" type="text" bind:value={codigoComercial} class="w-full border-gray-300 rounded-md shadow-sm focus:ring-purple-500 focus:border-purple-500" placeholder="Ej: MED-001" />
             </div>
             <div>
-                <label for="precioVenta" class="block text-sm font-medium text-gray-700 mb-1">Precio Venta (S/)</label>
-                <input id="precioVenta" type="number" step="0.01" min="0" required bind:value={precioVenta} class="w-full border-gray-300 rounded-md shadow-sm focus:ring-purple-500 focus:border-purple-500" placeholder="Ej: 15.00" />
+                <label for="concentracion" class="block text-sm font-medium text-gray-700 mb-1">Concentración</label>
+                <input id="concentracion" type="text" bind:value={concentracion} class="w-full border-gray-300 rounded-md shadow-sm focus:ring-purple-500 focus:border-purple-500" placeholder="Ej: 500mg" />
             </div>
         </div>
-        
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-                <label for="stockMinimo" class="block text-sm font-medium text-gray-700 mb-1">Stock Mínimo</label>
-                <input id="stockMinimo" type="number" min="0" required bind:value={stockMinimo} class="w-full border-gray-300 rounded-md shadow-sm focus:ring-purple-500 focus:border-purple-500" placeholder="Ej: 10" />
+                <label for="presentacion" class="block text-sm font-medium text-gray-700 mb-1">Presentación</label>
+                <input id="presentacion" type="text" bind:value={presentacion} class="w-full border-gray-300 rounded-md shadow-sm focus:ring-purple-500 focus:border-purple-500" placeholder="Ej: Cápsula" />
             </div>
-            <div class="pt-6">
-                <label class="flex items-center gap-2 text-sm font-medium text-gray-700">
-                    <input type="checkbox" bind:checked={requiereReceta} class="rounded border-gray-300 text-purple-600 shadow-sm focus:border-purple-300 focus:ring focus:ring-purple-200 focus:ring-opacity-50" />
-                    Requiere Receta Médica
-                </label>
+            <div>
+                <label for="categoria" class="block text-sm font-medium text-gray-700 mb-1">Categoría</label>
+                <input id="categoria" type="text" bind:value={categoria} class="w-full border-gray-300 rounded-md shadow-sm focus:ring-purple-500 focus:border-purple-500" placeholder="Ej: Analgésico" />
             </div>
+        </div>
+
+        <div>
+            <label for="precioVenta" class="block text-sm font-medium text-gray-700 mb-1">Precio Venta (S/) <span class="text-red-500">*</span></label>
+            <input id="precioVenta" type="number" step="0.01" min="0" required bind:value={precioVenta} class="w-full border-gray-300 rounded-md shadow-sm focus:ring-purple-500 focus:border-purple-500" placeholder="Ej: 15.00" />
         </div>
         
         <div class="flex justify-end gap-4 pt-4 mt-4 border-t">
@@ -190,3 +177,4 @@
     </div>
   </div>
 {/if}
+
