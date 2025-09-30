@@ -1,77 +1,86 @@
 <script>
+  import { supabase } from '$lib/supabaseClient';
   import { onMount } from 'svelte';
 
-  // Se asume que la sesión se pasará como prop desde la página principal
   export let session;
 
   let open = false;
+  let medicamentos = [];
+  let proveedores = [];
 
-  // Datos del formulario para un nuevo medicamento
-  let nombre = "";
-  let descripcion = "";
-  let presentacion = "";
+  // Datos del formulario
+  let medicamentoId = "";
+  let proveedorId = "";
+  let fechaIngreso = new Date().toISOString().split('T')[0];
+  let fechaVencimiento = "";
+  let cantidadInicial = null;
   let precioCompra = null;
-  let precioVenta = null;
-  let stockMinimo = 0;
-  let requiereReceta = false;
 
-  function resetForm() {
-    nombre = "";
-    descripcion = "";
-    presentacion = "";
-    precioCompra = null;
-    precioVenta = null;
-    stockMinimo = 0;
-    requiereReceta = false;
-  }
+  onMount(async () => {
+    try {
+      const resMed = await fetch("https://farmacia-269414280318.europe-west1.run.app/medicamentos");
+      if (resMed.ok) medicamentos = await resMed.json();
 
-  function close() {
-    open = false;
-    resetForm();
-  }
+      const resProv = await fetch("https://farmacia-269414280318.europe-west1.run.app/proveedores");
+      if (resProv.ok) proveedores = await resProv.json();
+    } catch (error) {
+      console.error("Error al cargar datos iniciales:", error);
+      alert("No se pudieron cargar los medicamentos o proveedores. Revisa la conexión.");
+    }
+  });
 
-  async function agregarMedicamento(event) {
+  async function agregarLote(event) {
     event.preventDefault();
 
-    if (!nombre || !precioCompra || !precioVenta) {
-      alert("Por favor, complete los campos obligatorios: Nombre, Precio de Compra y Precio de Venta.");
-      return;
-    }
-
-    const token = session?.access_token;
-    if (!token) {
-        alert("Error de autenticación. No se pudo obtener el token.");
+    if (!medicamentoId || !proveedorId || !fechaIngreso || !fechaVencimiento || !cantidadInicial || !precioCompra) {
+        alert("Por favor, complete todos los campos obligatorios.");
         return;
     }
 
-    const response = await fetch("https://farmacia-269414280318.europe-west1.run.app/medicamentos", {
+    const token = session?.access_token;
+    const response = await fetch("https://farmacia-269414280318.europe-west1.run.app/lotes", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "Authorization": `Bearer ${token}`
       },
       body: JSON.stringify({
-        nombre: nombre,
-        descripcion: descripcion,
-        presentacion: presentacion,
-        precioCompra: precioCompra,
-        precioVenta: precioVenta,
-        stockMinimo: stockMinimo,
-        requiereReceta: requiereReceta
+        medicamento_id: parseInt(medicamentoId),
+        proveedor_id: parseInt(proveedorId),
+        fecha_ingreso: fechaIngreso,
+        fecha_vencimiento: fechaVencimiento,
+        cantidad_inicial: cantidadInicial,
+        cantidad_actual: cantidadInicial, 
+        precio_compra: precioCompra
       })
     });
 
     if (response.ok) {
-      alert("✅ Medicamento agregado con éxito");
+      alert("✅ Lote agregado con éxito");
       close();
-      location.reload(); // Recarga la página para mostrar el nuevo medicamento en la lista
+      location.reload(); 
     } else {
       const error = await response.json();
-      alert("❌ Error: " + (error.detail || "Error al guardar el medicamento"));
+      alert("❌ Error: " + (error.detail || "Error al guardar el lote"));
     }
+  }
+
+  function resetForm() {
+    medicamentoId = "";
+    proveedorId = "";
+    fechaIngreso = new Date().toISOString().split('T')[0];
+    fechaVencimiento = "";
+    cantidadInicial = null;
+    precioCompra = null;
+  }
+
+  function close() {
+    open = false;
+    resetForm();
   }
 </script>
 
+<!-- NUEVO: Estilos dedicados para el modal, copiados de tu componente 'venta' -->
 <svelte:head>
   <style>
     .modal-overlay {
@@ -98,26 +107,27 @@
     .modal-content {
       position: relative;
       background: white;
-      border-radius: 0.75rem;
+      border-radius: 0.75rem; /* 12px */
       box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
       width: 100%;
-      max-width: 36rem; /* 576px */
+      max-width: 32rem; /* 512px */
       max-height: 90vh;
       overflow: hidden;
     }
   </style>
 </svelte:head>
 
-<!-- Botón para abrir el modal -->
 <button
   on:click={() => (open = true)}
-  class="bg-purple-600 text-white font-semibold px-4 py-2 rounded-lg shadow hover:bg-purple-700 transition duration-200"
+  class="bg-blue-600 text-white font-semibold px-4 py-2 rounded-lg shadow hover:bg-blue-700 transition duration-200"
 >
-  + Agregar Medicamento
+  Agregar Lote
 </button>
 
+<!-- Modal con la NUEVA estructura HTML -->
 {#if open}
   <div class="modal-overlay">
+    <!-- Fondo que al hacer clic cierra el modal -->
     <div 
       class="modal-backdrop"
       on:click={close}
@@ -126,9 +136,11 @@
       tabindex="-1"
     ></div>
     
+    <!-- Contenido del modal -->
     <div class="modal-content">
+      
       <div class="flex justify-between items-center p-4 border-b">
-        <h2 class="text-xl font-bold text-gray-800">Registrar Nuevo Medicamento</h2>
+        <h2 class="text-xl font-bold text-gray-800">Agregar Nuevo Lote</h2>
         <button on:click={close} aria-label="Cerrar" class="text-gray-400 hover:text-gray-600">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -136,53 +148,57 @@
         </button>
       </div>
 
-      <form on:submit={agregarMedicamento} class="p-6 space-y-4 overflow-y-auto" style="max-height: calc(90vh - 65px);">
+      <form on:submit={agregarLote} class="p-6 space-y-4 overflow-y-auto" style="max-height: calc(90vh - 65px);">
         
-        <div>
-          <label for="nombre" class="block text-sm font-medium text-gray-700 mb-1">Nombre del Medicamento</label>
-          <input id="nombre" type="text" required bind:value={nombre} class="w-full border-gray-300 rounded-md shadow-sm focus:ring-purple-500 focus:border-purple-500" placeholder="Ej: Paracetamol 500mg" />
-        </div>
-
-        <div>
-            <label for="descripcion" class="block text-sm font-medium text-gray-700 mb-1">Descripción</label>
-            <textarea id="descripcion" rows="3" bind:value={descripcion} class="w-full border-gray-300 rounded-md shadow-sm focus:ring-purple-500 focus:border-purple-500" placeholder="Ej: Analgésico y antipirético"></textarea>
-        </div>
-
-        <div>
-            <label for="presentacion" class="block text-sm font-medium text-gray-700 mb-1">Presentación</label>
-            <input id="presentacion" type="text" bind:value={presentacion} class="w-full border-gray-300 rounded-md shadow-sm focus:ring-purple-500 focus:border-purple-500" placeholder="Ej: Caja de 20 tabletas" />
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label for="medicamento" class="block text-sm font-medium text-gray-700 mb-1">Medicamento</label>
+            <select id="medicamento" required bind:value={medicamentoId} class="w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+              <option disabled value="">-- Seleccione --</option>
+              {#each medicamentos as m}
+                <option value={m.id}>{m.nombre}</option>
+              {/each}
+            </select>
+          </div>
+          <div>
+            <label for="proveedor" class="block text-sm font-medium text-gray-700 mb-1">Proveedor</label>
+            <select id="proveedor" required bind:value={proveedorId} class="w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+              <option disabled value="">-- Seleccione --</option>
+              {#each proveedores as p}
+                <option value={p.id}>{p.nombre}</option>
+              {/each}
+            </select>
+          </div>
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-                <label for="precioCompra" class="block text-sm font-medium text-gray-700 mb-1">Precio Compra (S/)</label>
-                <input id="precioCompra" type="number" step="0.01" min="0" required bind:value={precioCompra} class="w-full border-gray-300 rounded-md shadow-sm focus:ring-purple-500 focus:border-purple-500" placeholder="Ej: 10.50" />
-            </div>
-            <div>
-                <label for="precioVenta" class="block text-sm font-medium text-gray-700 mb-1">Precio Venta (S/)</label>
-                <input id="precioVenta" type="number" step="0.01" min="0" required bind:value={precioVenta} class="w-full border-gray-300 rounded-md shadow-sm focus:ring-purple-500 focus:border-purple-500" placeholder="Ej: 15.00" />
-            </div>
+          <div>
+            <label for="fechaIngreso" class="block text-sm font-medium text-gray-700 mb-1">Fecha Ingreso</label>
+            <input id="fechaIngreso" required type="date" bind:value={fechaIngreso} class="w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" />
+          </div>
+          <div>
+            <label for="fechaVencimiento" class="block text-sm font-medium text-gray-700 mb-1">Fecha Vencimiento</label>
+            <input id="fechaVencimiento" required type="date" bind:value={fechaVencimiento} class="w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" />
+          </div>
         </div>
         
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
-            <div>
-                <label for="stockMinimo" class="block text-sm font-medium text-gray-700 mb-1">Stock Mínimo</label>
-                <input id="stockMinimo" type="number" min="0" required bind:value={stockMinimo} class="w-full border-gray-300 rounded-md shadow-sm focus:ring-purple-500 focus:border-purple-500" placeholder="Ej: 10" />
-            </div>
-            <div class="pt-6">
-                <label class="flex items-center gap-2 text-sm font-medium text-gray-700">
-                    <input type="checkbox" bind:checked={requiereReceta} class="rounded border-gray-300 text-purple-600 shadow-sm focus:border-purple-300 focus:ring focus:ring-purple-200 focus:ring-opacity-50" />
-                    Requiere Receta Médica
-                </label>
-            </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label for="cantidadInicial" class="block text-sm font-medium text-gray-700 mb-1">Cantidad Inicial</label>
+            <input id="cantidadInicial" required type="number" min="1" placeholder="Ej: 100" bind:value={cantidadInicial} class="w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" />
+          </div>
+          <div>
+            <label for="precioCompra" class="block text-sm font-medium text-gray-700 mb-1">Precio Compra (S/)</label>
+            <input id="precioCompra" required type="number" step="0.01" min="0" placeholder="Ej: 15.50" bind:value={precioCompra} class="w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" />
+          </div>
         </div>
         
         <div class="flex justify-end gap-4 pt-4 mt-4 border-t">
           <button type="button" on:click={close} class="px-4 py-2 rounded-md bg-gray-200 text-gray-800 hover:bg-gray-300 font-semibold">
             Cancelar
           </button>
-          <button type="submit" class="px-4 py-2 rounded-md bg-purple-600 text-white hover:bg-purple-700 font-semibold">
-            Guardar Medicamento
+          <button type="submit" class="px-4 py-2 rounded-md bg-blue-600 text-white hover:bg-blue-700 font-semibold">
+            Guardar Lote
           </button>
         </div>
       </form>
