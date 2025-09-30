@@ -7,7 +7,7 @@
   let open = false;
   let loading = false;
 
-  // Datos del formulario adaptados a tu tabla actual
+  // Datos del formulario adaptados a tu estructura
   let nombre = "";
   let codigoComercial = "";
   let presentacion = "";
@@ -87,31 +87,61 @@
 
       const token = currentSession.access_token;
 
-      // Insertar directamente en Supabase (más confiable que tu API para este caso)
-      const { data, error } = await supabase
-        .from('medicamentos')
-        .insert([
-          {
-            nombre: nombre.trim(),
-            codigo_comercial: codigoComercial?.trim() || null,
-            presentacion: presentacion?.trim() || null,
-            concentracion: concentracion?.trim() || null,
-            categoria: categoria || null,
-            precio_venta: parseFloat(precioVenta)
-          }
-        ])
-        .select();
+      // Payload ajustado a la API
+      const payload = {
+        nombre: nombre.trim(),
+        codigoComercial: codigoComercial?.trim() || null,
+        presentacion: presentacion?.trim() || null,
+        concentracion: concentracion?.trim() || null,
+        categoria: categoria || null,
+        precioVenta: parseFloat(precioVenta)
+      };
 
-      if (error) {
-        console.error('Error de Supabase:', error);
-        errorMessage = error.message || "Error al guardar el medicamento";
-      } else {
+      console.log('📦 Enviando payload:', payload);
+
+      // Realizar petición a la API
+      const response = await fetch("https://farmacia-269414280318.europe-west1.run.app/medicamentos", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify(payload)
+      });
+
+      console.log('📊 Response status:', response.status);
+
+      if (response.ok) {
+        const textResponse = await response.text();
+        console.log('✅ Response:', textResponse);
+        
+        let newMedicamento = null;
+        try {
+          if (textResponse) {
+            const parsed = JSON.parse(textResponse);
+            newMedicamento = Array.isArray(parsed) ? parsed[0] : parsed;
+          }
+        } catch (e) {
+          console.log("Respuesta exitosa pero no JSON");
+        }
+
         showToastMessage("✅ Medicamento agregado con éxito", "success");
-        dispatch('medicamentoAgregado', data[0]);
+        dispatch('medicamentoAgregado', newMedicamento);
         close();
+      } else {
+        // Manejo de errores
+        const textResponse = await response.text();
+        console.error('❌ Error response:', textResponse);
+        
+        try {
+          const error = JSON.parse(textResponse);
+          errorMessage = error.error || error.detail || error.title || "Error al guardar el medicamento";
+        } catch (e) {
+          errorMessage = `Error del servidor (${response.status}): ${textResponse || "Sin detalles"}`;
+        }
       }
     } catch (error) {
-      console.error("Error en la petición:", error);
+      console.error("❌ Error en la petición:", error);
       errorMessage = "Error de conexión. Verifique su conexión a internet.";
     } finally {
       loading = false;
@@ -169,6 +199,7 @@
       border-radius: 0.5rem;
       box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
       animation: slideIn 0.3s ease-out;
+      font-weight: 600;
     }
     @keyframes slideIn {
       from {
@@ -194,7 +225,7 @@
 <!-- Toast -->
 {#if showToast}
   <div class="toast {toastType}">
-    <p class="font-semibold">{toastMessage}</p>
+    {toastMessage}
   </div>
 {/if}
 
@@ -261,7 +292,7 @@
             required 
             bind:value={nombre} 
             disabled={loading}
-            class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 disabled:bg-gray-100" 
+            class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 disabled:bg-gray-100 disabled:cursor-not-allowed" 
             placeholder="Ej: Paracetamol" 
           />
         </div>
@@ -277,7 +308,7 @@
               type="text" 
               bind:value={codigoComercial} 
               disabled={loading}
-              class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 disabled:bg-gray-100" 
+              class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 disabled:bg-gray-100 disabled:cursor-not-allowed" 
               placeholder="Ej: MED-001" 
             />
           </div>
@@ -291,7 +322,7 @@
               type="text" 
               bind:value={concentracion} 
               disabled={loading}
-              class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 disabled:bg-gray-100" 
+              class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 disabled:bg-gray-100 disabled:cursor-not-allowed" 
               placeholder="Ej: 500mg" 
             />
           </div>
@@ -307,7 +338,7 @@
             type="text" 
             bind:value={presentacion} 
             disabled={loading}
-            class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 disabled:bg-gray-100" 
+            class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 disabled:bg-gray-100 disabled:cursor-not-allowed" 
             placeholder="Ej: Tableta, Cápsula, Jarabe" 
           />
         </div>
@@ -322,7 +353,7 @@
               id="categoria" 
               bind:value={categoria} 
               disabled={loading}
-              class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 disabled:bg-gray-100"
+              class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
             >
               <option value="">Seleccione una categoría</option>
               {#each categorias as cat}
@@ -343,7 +374,7 @@
               required 
               bind:value={precioVenta} 
               disabled={loading}
-              class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 disabled:bg-gray-100" 
+              class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 disabled:bg-gray-100 disabled:cursor-not-allowed" 
               placeholder="15.00" 
             />
           </div>
