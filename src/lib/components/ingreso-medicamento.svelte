@@ -131,6 +131,7 @@
     <div 
       class="modal-backdrop"
       on:click={close}
+      on:keydown={(e) => { if (e.key === 'Enter' || e.key === 'Escape') close() }}
       role="button"
       tabindex="-1"
     ></div>
@@ -204,3 +205,4 @@
     </div>
   </div>
 {/if}
+
