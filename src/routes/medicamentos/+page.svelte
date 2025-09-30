@@ -1,7 +1,7 @@
 <script>
   import { supabase } from '$lib/supabaseClient';
   import { goto } from '$app/navigation';
-  import IngresoMedicamento from '$lib/components/ingreso-medicamento.svelte';
+  import IngresoMedicamento from '$lib/components/ingreso-medicamentos.svelte';
   import ListarMedicamentos from '$lib/components/listar-medicamentos.svelte';
 
   let session = $state(null);
