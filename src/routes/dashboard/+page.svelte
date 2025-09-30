@@ -2,7 +2,7 @@
   import { supabase } from '$lib/supabaseClient';
   import { goto } from '$app/navigation';
   import Venta from '$lib/components/venta.svelte';
-  import ListarProducto from '$lib/components/listar-producto.svelte';
+  import ListarProducto from '$lib/components/listar-medicamentos.svelte';
   
   let session = $state(null);
 
