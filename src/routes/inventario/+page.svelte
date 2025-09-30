@@ -1,8 +1,9 @@
 <script>
   import { supabase } from '$lib/supabaseClient';
   import { goto } from '$app/navigation';
-  import IngresoMedicamento from '$lib/components/ingreso-medicamento.svelte';
+  import IngresoLote from '$lib/components/ingreso-lote.svelte';
   import ListarLotes from '$lib/components/listar-lotes.svelte';
+	
 
   let session = $state(null);
 
@@ -42,7 +43,7 @@
 
   <main class="p-8 space-y-8">
     {#if session}
-      <IngresoMedicamento {session} />
+      <IngresoLote {session} />
       <ListarLotes {session} />
     {/if}
   </main>
