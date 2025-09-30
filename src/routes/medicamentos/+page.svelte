@@ -1,7 +1,7 @@
 <script>
   import { supabase } from '$lib/supabaseClient';
   import { goto } from '$app/navigation';
-  import IngresoMedicamentos from '$lib/components/ingreso-medicamentos.svelte';
+  import IngresoMedicamento from '$lib/components/ingreso-medicamento.svelte';
   import ListarMedicamentos from '$lib/components/listar-medicamentos.svelte';
 
   let session = $state(null);
@@ -43,7 +43,7 @@
   <main class="p-8 space-y-8">
     {#if session}
     <p>hola mundo</p>
-    <IngresoMedicamentos {session} />
+    <IngresoMedicamento {session} />
     <ListarMedicamentos {session} />
     {/if}
   </main>
