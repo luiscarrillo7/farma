@@ -15,10 +15,6 @@
     await supabase.auth.signOut();
     goto('/login');
   }
-
-  function irInventario() {
-    goto('/inventario');
-  }
 </script>
 
 <div class="min-h-screen bg-gray-50">
@@ -26,11 +22,11 @@
     <h1 class="text-2xl font-bold">Bienvenido</h1>
 
     <div class="flex gap-4">
-      <button 
-        onclick={irInventario} 
+      <a 
+        href="/inventario" 
         class="bg-green-500 hover:bg-green-600 font-semibold py-2 px-4 rounded-lg">
         Inventario
-      </button>
+      </a>
 
       <button 
         onclick={logout} 
