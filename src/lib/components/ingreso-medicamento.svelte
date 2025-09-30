@@ -92,7 +92,8 @@
 
 <!-- Modal -->
 {#if open}
-  <div class="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4">
+  <!-- CONTENEDOR PRINCIPAL DEL MODAL: Se cambió z-50 por un z-index más alto para asegurar que esté al frente -->
+  <div class="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4" style="z-index: 9999;">
     
     <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg relative">
       
@@ -164,4 +165,3 @@
     </div>
   </div>
 {/if}
-
