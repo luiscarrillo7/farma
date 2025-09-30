@@ -1,89 +1,112 @@
 <script>
-  import { createEventDispatcher } from 'svelte';
+  import { supabase } from '$lib/supabaseClient';
+  import { goto } from '$app/navigation';
+  import { onMount } from 'svelte';
 
-  const dispatch = createEventDispatcher();
+  let medicamentos = [];
+  let proveedores = [];
 
-  let showModal = false;
+  // Datos del formulario
+  let medicamentoId = "";
+  let proveedorId = "";
+  let fechaIngreso = "";
+  let fechaVencimiento = "";
+  let cantidadInicial = 0;
+  let cantidadActual = 0;
+  let precioCompra = 0;
 
-  // Campos del formulario
-  let medicamento_id = "";
-  let proveedor_id = "";
-  let fecha_ingreso = "";
-  let fecha_vencimiento = "";
-  let cantidad_inicial = "";
-  let cantidad_actual = "";
-  let precio_compra = "";
+  // Cargar combos desde tu API
+  onMount(async () => {
+    const resMed = await fetch("https://farmacia-269414280318.europe-west1.run.app/medicamentos");
+    medicamentos = await resMed.json();
 
-  async function guardarLote() {
-    try {
-      const res = await fetch("https://farmacia-269414280318.europe-west1.run.app/lotes", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          medicamento_id,
-          proveedor_id,
-          fecha_ingreso,
-          fecha_vencimiento,
-          cantidad_inicial: Number(cantidad_inicial),
-          cantidad_actual: Number(cantidad_actual),
-          precio_compra: Number(precio_compra)
-        })
-      });
+    const resProv = await fetch("https://farmacia-269414280318.europe-west1.run.app/proveedores");
+    proveedores = await resProv.json();
+  });
 
-      if (!res.ok) throw new Error("Error al guardar el lote");
+  async function agregarLote() {
+    const token = (await supabase.auth.getSession()).data.session?.access_token;
 
-      dispatch("loteAgregado"); // notificar al padre para refrescar la lista
-      resetForm();
-      showModal = false;
+    const response = await fetch("https://farmacia-269414280318.europe-west1.run.app/lotes", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        medicamento_id: medicamentoId,
+        proveedor_id: proveedorId,
+        fecha_ingreso: fechaIngreso,
+        fecha_vencimiento: fechaVencimiento,
+        cantidad_inicial: cantidadInicial,
+        cantidad_actual: cantidadActual,
+        precio_compra: precioCompra
+      })
+    });
+
+    if (response.ok) {
       alert("✅ Lote agregado con éxito");
-    } catch (err) {
-      alert("❌ " + err.message);
+      goto("/inventario"); // refrescar la vista
+    } else {
+      const error = await response.json();
+      alert("❌ Error: " + (error.detail || "Error al guardar el lote"));
     }
-  }
-
-  function resetForm() {
-    medicamento_id = "";
-    proveedor_id = "";
-    fecha_ingreso = "";
-    fecha_vencimiento = "";
-    cantidad_inicial = "";
-    cantidad_actual = "";
-    precio_compra = "";
   }
 </script>
 
-<!-- Botón que abre el modal -->
-<button
-  on:click={() => (showModal = true)}
-  class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg"
->
-  ➕ Agregar Lote
-</button>
+<div class="p-8 max-w-2xl mx-auto">
+  <h2 class="text-2xl font-bold mb-6">Agregar Lote</h2>
 
-<!-- Modal -->
-{#if showModal}
-  <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-    <div class="bg-white rounded-xl shadow-lg w-full max-w-lg p-6">
-      <h2 class="text-xl font-bold mb-4">Agregar Nuevo Lote</h2>
-
-      <form on:submit|preventDefault={guardarLote} class="space-y-3">
-        <input type="text" bind:value={medicamento_id} placeholder="ID Medicamento" class="w-full border p-2 rounded" required />
-        <input type="text" bind:value={proveedor_id} placeholder="ID Proveedor" class="w-full border p-2 rounded" required />
-        <input type="date" bind:value={fecha_ingreso} class="w-full border p-2 rounded" required />
-        <input type="date" bind:value={fecha_vencimiento} class="w-full border p-2 rounded" required />
-        <input type="number" bind:value={cantidad_inicial} placeholder="Cantidad Inicial" class="w-full border p-2 rounded" required />
-        <input type="number" bind:value={cantidad_actual} placeholder="Cantidad Actual" class="w-full border p-2 rounded" required />
-        <input type="number" step="0.01" bind:value={precio_compra} placeholder="Precio Compra" class="w-full border p-2 rounded" required />
-
-        <div class="flex justify-end gap-3 mt-4">
-          <button type="button" on:click={() => (showModal = false)} class="px-4 py-2 bg-gray-400 rounded-lg hover:bg-gray-500">
-            Cancelar
-          </button>
-          <button type="submit" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
-            Guardar
-          </button>
-        </div>
-      </form>
+  <form on:submit|preventDefault={agregarLote} class="space-y-4 bg-white p-6 rounded-lg shadow">
+    <div>
+      <label for="medicamento" class="block mb-1 font-semibold">Medicamento</label>
+      <select id="medicamento" bind:value={medicamentoId} class="w-full border rounded p-2">
+        <option value="">-- Seleccione --</option>
+        {#each medicamentos as m}
+          <option value={m.id}>{m.nombre}</option>
+        {/each}
+      </select>
     </div>
-  </div>
-{/if}
+
+    <div>
+      <label for="proveedor" class="block mb-1 font-semibold">Proveedor</label>
+      <select id="proveedor" bind:value={proveedorId} class="w-full border rounded p-2">
+        <option value="">-- Seleccione --</option>
+        {#each proveedores as p}
+          <option value={p.id}>{p.nombre}</option>
+        {/each}
+      </select>
+    </div>
+
+    <div class="grid grid-cols-2 gap-4">
+      <div>
+        <label for="fechaIngreso" class="block mb-1 font-semibold">Fecha Ingreso</label>
+        <input id="fechaIngreso" type="date" bind:value={fechaIngreso} class="w-full border rounded p-2" />
+      </div>
+      <div>
+        <label for="fechaVencimiento" class="block mb-1 font-semibold">Fecha Vencimiento</label>
+        <input id="fechaVencimiento" type="date" bind:value={fechaVencimiento} class="w-full border rounded p-2" />
+      </div>
+    </div>
+
+    <div class="grid grid-cols-2 gap-4">
+      <div>
+        <label for="cantidadInicial" class="block mb-1 font-semibold">Cantidad Inicial</label>
+        <input id="cantidadInicial" type="number" bind:value={cantidadInicial} class="w-full border rounded p-2" />
+      </div>
+      <div>
+        <label for="cantidadActual" class="block mb-1 font-semibold">Cantidad Actual</label>
+        <input id="cantidadActual" type="number" bind:value={cantidadActual} class="w-full border rounded p-2" />
+      </div>
+    </div>
+
+    <div>
+      <label for="precioCompra" class="block mb-1 font-semibold">Precio Compra</label>
+      <input id="precioCompra" type="number" step="0.01" bind:value={precioCompra} class="w-full border rounded p-2" />
+    </div>
+
+    <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+      Guardar Lote
+    </button>
+  </form>
+</div>
