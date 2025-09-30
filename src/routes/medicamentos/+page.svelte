@@ -42,8 +42,7 @@
 
   <main class="p-8 space-y-8">
     {#if session}
-      <IngresoMedicamento {session} />
-      <ListarLotes {session} />
+    <p>hola mundo</p>
     {/if}
   </main>
 </div>
