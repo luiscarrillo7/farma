@@ -1,22 +1,14 @@
 <script>
   import { supabase } from '$lib/supabaseClient';
   import { goto } from '$app/navigation';
-  import { onMount } from 'svelte';
   import Venta from '$lib/components/venta.svelte';
   import ListarProducto from '$lib/components/listar-producto.svelte';
   
-  let session = null;
-  let isChecking = true;
+  let session = $state(null);
 
-  onMount(async () => {
-    const { data: { session: currentSession } } = await supabase.auth.getSession();
-    session = currentSession;
-
-    if (!session) {
-      goto('/login');
-    } else {
-      isChecking = false;
-    }
+  supabase.auth.getSession().then(({ data }) => {
+    session = data.session;
+    if (!session) goto('/login');
   });
 
   async function logout() {
@@ -37,7 +29,7 @@
       </a>
 
       <button 
-        on:click={logout} 
+        onclick={logout} 
         class="bg-red-500 hover:bg-red-600 font-semibold py-2 px-4 rounded-lg">
         Salir
       </button>
@@ -45,9 +37,7 @@
   </header>
 
   <main class="p-8 space-y-8">
-    {#if isChecking}
-      <p class="text-gray-600 font-semibold">Verificando sesión...</p>
-    {:else if session}
+    {#if session}
       <Venta {session} />
       <ListarProducto {session} />
     {/if}
