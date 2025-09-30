@@ -16,17 +16,17 @@ let precioCompra = 0;
 
   // Cargar combos desde tu API
   onMount(async () => {
-    const resMed = await fetch("http://localhost:5000/medicamentos");
+    const resMed = await fetch("https://farmacia-269414280318.europe-west1.run.app/medicamentos");
     medicamentos = await resMed.json();
 
-    const resProv = await fetch("http://localhost:5000/proveedores");
+    const resProv = await fetch("https://farmacia-269414280318.europe-west1.run.app/proveedores");
     proveedores = await resProv.json();
   });
 
 async function agregarLote() {
   const token = (await supabase.auth.getSession()).data.session?.access_token;
 
-  const response = await fetch("http://localhost:5000/lotes", {
+  const response = await fetch("https://farmacia-269414280318.europe-west1.run.app/lotes", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
