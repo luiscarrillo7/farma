@@ -1,5 +1,5 @@
 <script>
-  import IngresoMedicamentoModal from '$lib/components/ingreso-medicamento-modal.svelte';
+  import IngresoMedicamentoModal from '$lib/components/ingreso-medicamento.svelte';
   import ListarLotes from '$lib/components/listar-lotes.svelte';
 
   let modalAbierto = false;
