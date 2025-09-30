@@ -1,5 +1,5 @@
 <script>
-  import IngresoMedicamento from '$components/IngresoMedicamento.svelte';
+  import IngresoMedicamento from '$components/ingreso-medicamento.svelte';
 </script>
 
 <IngresoMedicamento />
