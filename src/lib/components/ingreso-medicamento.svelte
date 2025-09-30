@@ -29,11 +29,9 @@
     }
   });
 
-  // La función ahora acepta el 'event' para poder usar event.preventDefault()
   async function agregarLote(event) {
-    event.preventDefault(); // Evita que la página se recargue al enviar el formulario
+    event.preventDefault();
 
-    // Validación simple
     if (!medicamentoId || !proveedorId || !fechaIngreso || !fechaVencimiento || !cantidadInicial || !precioCompra) {
         alert("Por favor, complete todos los campos obligatorios.");
         return;
@@ -82,7 +80,43 @@
   }
 </script>
 
-<!-- Botón para abrir modal. CORREGIDO: on:click -->
+<!-- NUEVO: Estilos dedicados para el modal, copiados de tu componente 'venta' -->
+<svelte:head>
+  <style>
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+      z-index: 9999;
+    }
+    .modal-backdrop {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(4px);
+    }
+    .modal-content {
+      position: relative;
+      background: white;
+      border-radius: 0.75rem; /* 12px */
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+      width: 100%;
+      max-width: 32rem; /* 512px */
+      max-height: 90vh;
+      overflow: hidden;
+    }
+  </style>
+</svelte:head>
+
 <button
   on:click={() => (open = true)}
   class="bg-blue-600 text-white font-semibold px-4 py-2 rounded-lg shadow hover:bg-blue-700 transition duration-200"
@@ -90,16 +124,22 @@
   Agregar Lote
 </button>
 
-<!-- Modal -->
+<!-- Modal con la NUEVA estructura HTML -->
 {#if open}
-  <!-- CONTENEDOR PRINCIPAL DEL MODAL: Se cambió z-50 por un z-index más alto para asegurar que esté al frente -->
-  <div class="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4" style="z-index: 9999;">
+  <div class="modal-overlay">
+    <!-- Fondo que al hacer clic cierra el modal -->
+    <div 
+      class="modal-backdrop"
+      on:click={close}
+      role="button"
+      tabindex="-1"
+    ></div>
     
-    <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg relative">
+    <!-- Contenido del modal -->
+    <div class="modal-content">
       
       <div class="flex justify-between items-center p-4 border-b">
         <h2 class="text-xl font-bold text-gray-800">Agregar Nuevo Lote</h2>
-        <!-- Botón de cierre. CORREGIDO: se añadió aria-label para accesibilidad -->
         <button on:click={close} aria-label="Cerrar" class="text-gray-400 hover:text-gray-600">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -107,8 +147,7 @@
         </button>
       </div>
 
-      <!-- Formulario. CORREGIDO: sin modificadores, la lógica está en el script -->
-      <form on:submit={agregarLote} class="p-6 space-y-4">
+      <form on:submit={agregarLote} class="p-6 space-y-4 overflow-y-auto" style="max-height: calc(90vh - 65px);">
         
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
