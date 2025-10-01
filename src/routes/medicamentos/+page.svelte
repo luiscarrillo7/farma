@@ -63,43 +63,8 @@
 </script>
 
 <div class="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-  <!-- Header mejorado -->
-  <header class="bg-gradient-to-r from-blue-800 to-blue-900 text-white p-4 shadow-2xl">
-    <div class="max-w-7xl mx-auto flex justify-between items-center">
-      <div class="flex items-center gap-3">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-        </svg>
-        <div>
-          <h1 class="text-2xl font-bold">Inventario de Medicamentos</h1>
-          <p class="text-blue-200 text-sm">Gestiona tu catálogo de productos</p>
-        </div>
-      </div>
-
-      <div class="flex gap-3">
-        <button 
-          onclick={irDashboard} 
-          class="bg-green-500 hover:bg-green-600 font-semibold py-2 px-4 rounded-lg shadow-md transition duration-200 flex items-center gap-2"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-            <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z" />
-          </svg>
-          Dashboard
-        </button>
-
-        <button 
-          onclick={logout} 
-          class="bg-red-500 hover:bg-red-600 font-semibold py-2 px-4 rounded-lg shadow-md transition duration-200 flex items-center gap-2"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-            <path fill-rule="evenodd" d="M3 3a1 1 0 00-1 1v12a1 1 0 102 0V4a1 1 0 00-1-1zm10.293 9.293a1 1 0 001.414 1.414l3-3a1 1 0 000-1.414l-3-3a1 1 0 10-1.414 1.414L14.586 9H7a1 1 0 100 2h7.586l-1.293 1.293z" clip-rule="evenodd" />
-          </svg>
-          Salir
-        </button>
-      </div>
-    </div>
-  </header>
-
+ 
+  
   <!-- Contenido principal -->
   <main class="max-w-7xl mx-auto p-6 md:p-8 space-y-8">
     {#if session}
