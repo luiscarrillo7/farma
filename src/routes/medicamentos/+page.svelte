@@ -8,7 +8,6 @@
   let session = $state(null);
   let medicamentos = $state([]);
   let loading = $state(true);
-  let refreshKey = $state(0); // Para forzar refresh del componente ListarMedicamentos
 
   // Obtener sesión
   supabase.auth.getSession().then(({ data }) => {
@@ -27,6 +26,7 @@
       if (response.ok) {
         const data = await response.json();
         medicamentos = data;
+        console.log('Medicamentos cargados desde API:', data); // Para debug
       }
     } catch (error) {
       console.error('Error al cargar medicamentos:', error);
@@ -37,29 +37,19 @@
 
   // Handler cuando se agrega un nuevo medicamento
   function handleNuevoMedicamento(event) {
-    // Opción 1: Si la API devuelve el medicamento creado, agregarlo a la lista
-    if (event.detail) {
-      medicamentos = [...medicamentos, event.detail];
-    }
-    
-    // Opción 2: Recargar toda la lista (más seguro)
+    // Recargar toda la lista
     cargarMedicamentos();
-    
-    // Opción 3: Forzar refresh del componente ListarMedicamentos
-    refreshKey++;
   }
 
   // Handler cuando se actualiza un medicamento
   function handleMedicamentoActualizado(event) {
     cargarMedicamentos();
-    refreshKey++;
   }
 
   // Handler cuando se elimina un medicamento
   function handleMedicamentoEliminado(event) {
     const idEliminado = event.detail;
     medicamentos = medicamentos.filter(m => m.id !== idEliminado);
-    refreshKey++;
   }
 
   async function logout() {
@@ -113,7 +103,7 @@
   <!-- Contenido principal -->
   <main class="max-w-7xl mx-auto p-6 md:p-8 space-y-8">
     {#if session}
-      <!-- Sección de estadísticas rápidas (opcional) -->
+      <!-- Sección de estadísticas rápidas -->
       <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div class="bg-white rounded-xl shadow-md p-6 border-l-4 border-blue-500">
           <div class="flex items-center justify-between">
@@ -193,14 +183,13 @@
             </div>
           </div>
         {:else}
-          <!-- Key reactiva para forzar refresh -->
-          {#key refreshKey}
-            <ListarMedicamentos 
-              {session}
-              on:medicamentoActualizado={handleMedicamentoActualizado}
-              on:medicamentoEliminado={handleMedicamentoEliminado}
-            />
-          {/key}
+          <!-- CAMBIO IMPORTANTE: Pasar medicamentos como prop -->
+          <ListarMedicamentos 
+            {session}
+            {medicamentos}
+            on:medicamentoActualizado={handleMedicamentoActualizado}
+            on:medicamentoEliminado={handleMedicamentoEliminado}
+          />
         {/if}
       </div>
 
@@ -218,7 +207,7 @@
     {/if}
   </main>
 
-  <!-- Footer (opcional) -->
+  <!-- Footer -->
   <footer class="bg-white border-t border-gray-200 mt-12 py-6">
     <div class="max-w-7xl mx-auto px-6 text-center text-gray-600 text-sm">
       <p>Sistema de Gestión Farmacéutica © 2024</p>
