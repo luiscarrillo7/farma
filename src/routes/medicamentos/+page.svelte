@@ -69,55 +69,6 @@
   <main class="max-w-7xl mx-auto p-6 md:p-8 space-y-8">
     {#if session}
       <!-- Sección de estadísticas rápidas -->
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div class="bg-white rounded-xl shadow-md p-6 border-l-4 border-blue-500">
-          <div class="flex items-center justify-between">
-            <div>
-              <p class="text-gray-600 text-sm font-medium">Total Medicamentos</p>
-              <p class="text-3xl font-bold text-gray-800 mt-1">
-                {loading ? '...' : medicamentos.length}
-              </p>
-            </div>
-            <div class="bg-blue-100 rounded-full p-3">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-              </svg>
-            </div>
-          </div>
-        </div>
-
-        <div class="bg-white rounded-xl shadow-md p-6 border-l-4 border-green-500">
-          <div class="flex items-center justify-between">
-            <div>
-              <p class="text-gray-600 text-sm font-medium">Stock Disponible</p>
-              <p class="text-3xl font-bold text-gray-800 mt-1">
-                {loading ? '...' : medicamentos.reduce((sum, m) => sum + (m.stock_actual || 0), 0)}
-              </p>
-            </div>
-            <div class="bg-green-100 rounded-full p-3">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            </div>
-          </div>
-        </div>
-
-        <div class="bg-white rounded-xl shadow-md p-6 border-l-4 border-yellow-500">
-          <div class="flex items-center justify-between">
-            <div>
-              <p class="text-gray-600 text-sm font-medium">Stock Bajo</p>
-              <p class="text-3xl font-bold text-gray-800 mt-1">
-                {loading ? '...' : medicamentos.filter(m => (m.stock_actual || 0) <= (m.stock_minimo || 0)).length}
-              </p>
-            </div>
-            <div class="bg-yellow-100 rounded-full p-3">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-yellow-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-              </svg>
-            </div>
-          </div>
-        </div>
-      </div>
 
       <!-- Sección de acciones -->
       <div class="bg-white rounded-xl shadow-md p-6">
