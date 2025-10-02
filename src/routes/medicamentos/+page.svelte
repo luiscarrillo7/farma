@@ -65,7 +65,7 @@
 <div class="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
  
     <header class="bg-blue-800 text-white p-4 shadow-lg flex justify-between items-center">
-    <h1 class="text-2xl font-bold">Inventario</h1>
+    <h1 class="text-2xl font-bold">Medicamentos</h1>
 
     <div class="flex gap-4">
       <button 
