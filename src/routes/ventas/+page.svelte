@@ -3,73 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Plantilla de Modal de Venta</title>
+    <title>Página de Registro de Venta</title>
     <!-- Inclusión de Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        /* Estilos personalizados para el modal, equivalentes a los de Svelte */
-        .modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 1rem;
-            z-index: 9999;
-        }
-        .modal-backdrop {
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background-color: rgba(0, 0, 0, 0.5);
-            backdrop-filter: blur(4px);
-        }
-        .modal-content {
-            position: relative;
-            background: white;
-            border-radius: 1rem;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-            max-width: 48rem;
-            width: 100%;
-            max-height: 90vh;
-            overflow: hidden;
-        }
-        /* Clase para ocultar el modal */
-        .hidden {
-            display: none;
-        }
-    </style>
 </head>
-<body class="bg-gray-100 flex items-center justify-center h-screen">
+<body class="bg-gray-100">
 
-    <!-- Botón para abrir el Modal -->
-    <div class="text-center">
-        <button 
-            id="openModalBtn"
-            class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-8 rounded-lg text-xl shadow-lg transition-all"
-        >
-            🛒 Registrar Nueva Venta
-        </button>
-    </div>
-
-    <!-- Contenedor del Modal -->
-    <div id="modal" class="modal-overlay hidden">
-        <div id="modalBackdrop" class="modal-backdrop"></div>
-        
-        <div class="modal-content">
-            <div class="flex justify-between items-center p-6 border-b bg-gradient-to-r from-blue-600 to-blue-700">
-                <h3 class="text-2xl font-bold text-white">Registrar Venta</h3>
-                <button id="closeModalBtn" class="text-white hover:bg-white/20 rounded-full p-2 text-3xl disabled:opacity-50 transition-colors">
-                    &times;
-                </button>
+    <!-- Contenedor Principal de la Página -->
+    <main class="container mx-auto p-4 sm:p-6 lg:p-8">
+        <div class="bg-white rounded-lg shadow-lg overflow-hidden">
+            <div class="p-6 border-b bg-gradient-to-r from-blue-600 to-blue-700">
+                <h1 class="text-2xl font-bold text-white">Registrar Venta</h1>
             </div>
 
-            <div class="overflow-y-auto max-h-[calc(90vh-80px)] p-6">
+            <div class="p-6">
                 <form id="ventaForm" class="space-y-6">
                     <!-- Selector de Cliente -->
                     <select id="clienteSelect" class="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none text-gray-700">
@@ -119,7 +66,7 @@
                 </form>
             </div>
         </div>
-    </div>
+    </main>
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
@@ -136,7 +83,6 @@
 
             // --- ESTADO DE LA APLICACIÓN ---
             let state = {
-                open: false,
                 medicamentos: [],
                 clientes: [],
                 items: [],
@@ -148,10 +94,6 @@
             };
 
             // --- REFERENCIAS AL DOM ---
-            const modal = document.getElementById('modal');
-            const openModalBtn = document.getElementById('openModalBtn');
-            const closeModalBtn = document.getElementById('closeModalBtn');
-            const modalBackdrop = document.getElementById('modalBackdrop');
             const ventaForm = document.getElementById('ventaForm');
             const clienteSelect = document.getElementById('clienteSelect');
             const itemsContainer = document.getElementById('itemsContainer');
@@ -163,7 +105,10 @@
 
             // Carga los datos de medicamentos y clientes desde la API
             async function loadData() {
-                if (!session?.access_token) return;
+                if (!session?.access_token || session.access_token === 'TU_ACCESS_TOKEN_AQUI') {
+                    alert('Error de configuración: Por favor, introduce un access token real en el script.');
+                    return;
+                }
                 
                 const now = Date.now();
                 const cacheIsValid = (now - state.cacheTimestamp) < CACHE_DURATION;
@@ -190,7 +135,6 @@
                         state.cacheTimestamp = Date.now();
                     } catch (error) {
                         alert(`Error al cargar datos: ${error.message}`);
-                        close();
                         return;
                     } finally {
                         setState({ isLoading: false });
@@ -199,7 +143,6 @@
 
                 if (!state.medicamentos || state.medicamentos.length === 0) {
                     alert("No hay medicamentos disponibles para la venta.");
-                    close();
                     return;
                 }
 
@@ -269,7 +212,7 @@
                     
                     alert(`✅ Venta registrada con éxito!\nID: ${result.venta_id}\nTotal: $${result.total_calculado}`);
                     state.cacheTimestamp = 0; // Invalidar caché
-                    close();
+                    resetForm();
                 } catch (error) {
                     alert(`❌ Error al registrar la venta: ${error.message}`);
                 } finally {
@@ -277,32 +220,22 @@
                 }
             }
             
-            // Abre el modal y reinicia el estado
-            function open() {
+            // Reinicia el formulario a su estado inicial
+            function resetForm() {
                 setState({
-                    open: true,
                     items: [],
                     clienteId: ''
                 });
-                loadData();
-            }
-
-            // Cierra el modal y reinicia el estado
-            function close() {
-                setState({
-                    open: false,
-                    items: [],
-                    clienteId: ''
-                });
+                // Añade una fila vacía para la siguiente venta
+                if (state.medicamentos.length > 0) {
+                   addItem();
+                }
             }
 
             // --- FUNCIONES DE RENDERIZADO ---
 
             // Función central para actualizar la UI basada en el estado
             function render() {
-                // Visibilidad del Modal
-                modal.classList.toggle('hidden', !state.open);
-
                 // Renderizar clientes
                 clienteSelect.innerHTML = '<option value="">Público General</option>' + 
                     state.clientes.map(c => `<option value="${c.id}">${c.nombre} ${c.apellido}</option>`).join('');
@@ -321,7 +254,6 @@
 
                 // Actualizar estado de los botones
                 const disabled = state.isLoading;
-                closeModalBtn.disabled = disabled;
                 clienteSelect.disabled = disabled;
                 addItemBtn.disabled = disabled;
                 submitBtn.disabled = disabled || state.items.length === 0;
@@ -364,9 +296,6 @@
             }
             
             // --- EVENT LISTENERS ---
-            openModalBtn.addEventListener('click', open);
-            closeModalBtn.addEventListener('click', close);
-            modalBackdrop.addEventListener('click', close);
             addItemBtn.addEventListener('click', addItem);
             ventaForm.addEventListener('submit', submitVenta);
 
@@ -398,14 +327,10 @@
                 }
             });
 
-            // Cerrar con la tecla Escape
-            window.addEventListener('keydown', (e) => {
-                if (e.key === 'Escape' && state.open) {
-                    close();
-                }
-            });
-
+            // Cargar datos iniciales al cargar la página
+            loadData();
         });
     </script>
 </body>
 </html>
+
