@@ -2,7 +2,7 @@
   import { supabase } from '$lib/supabaseClient';
   import { goto } from '$app/navigation';
   import { onMount } from 'svelte';
-  import IngresoMedicamento from '$lib/components/ingreso-medicamento.svelte';
+  import IngresoMedicamento from '$lib/components/modal-ingreso-medicamento.svelte';
   import ListarMedicamentos from '$lib/components/listar-medicamentos.svelte';
 
   let session = $state(null);

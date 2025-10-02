@@ -1,7 +1,7 @@
 <script>
   import { supabase } from '$lib/supabaseClient';
   import { goto } from '$app/navigation';
-  import Venta from '$lib/components/venta.svelte';
+  import Venta from '$lib/components/modal-venta.svelte';
   import ListarProducto from '$lib/components/listar-medicamentos-stock.svelte';
   
   let session = $state(null);

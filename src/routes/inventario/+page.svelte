@@ -1,7 +1,7 @@
 <script>
   import { supabase } from '$lib/supabaseClient';
   import { goto } from '$app/navigation';
-  import IngresoLote from '$lib/components/ingreso-lote.svelte';
+  import IngresoLote from '$lib/components/modal-ingreso-lote.svelte';
   import ListarLotes from '$lib/components/listar-lotes.svelte';
 	
 
