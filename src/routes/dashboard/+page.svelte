@@ -22,6 +22,9 @@
   function irMedicamentos() {
     goto('/medicamentos');
   }
+    function irVentas() {
+    goto('/ventas');
+  }
 </script>
 
 <div class="min-h-screen bg-gray-50">
@@ -39,7 +42,11 @@
         class="bg-green-500 hover:bg-green-600 font-semibold py-2 px-4 rounded-lg">
         Medicamentos
       </button>
-
+      <button 
+        onclick={irVentas} 
+        class="bg-green-500 hover:bg-green-600 font-semibold py-2 px-4 rounded-lg">
+        ventas
+      </button>
       <button 
         onclick={logout} 
         class="bg-red-500 hover:bg-red-600 font-semibold py-2 px-4 rounded-lg">
