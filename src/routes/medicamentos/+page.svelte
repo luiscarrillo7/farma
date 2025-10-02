@@ -69,14 +69,9 @@
 
     <div class="flex gap-4">
       <button 
-        onclick={irInventario} 
+        onclick={irDashboard} 
         class="bg-green-500 hover:bg-green-600 font-semibold py-2 px-4 rounded-lg">
-        Inventario
-      </button>
-      <button 
-        onclick={irMedicamentos} 
-        class="bg-green-500 hover:bg-green-600 font-semibold py-2 px-4 rounded-lg">
-        Medicamentos
+        Dashboard
       </button>
 
       <button 
