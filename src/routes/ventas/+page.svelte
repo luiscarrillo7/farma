@@ -6,6 +6,8 @@
     <title>Página de Registro de Venta</title>
     <!-- Inclusión de Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Inclusión del cliente de Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body class="bg-gray-100">
 
@@ -72,17 +74,18 @@
         document.addEventListener('DOMContentLoaded', () => {
             // --- CONFIGURACIÓN ---
             const API_URL = 'https://farmacia-269414280318.europe-west1.run.app';
-            // Simulación del objeto 'session'. Reemplaza esto con tu lógica de autenticación real.
-            const session = {
-                access_token: 'TU_ACCESS_TOKEN_AQUI', // IMPORTANTE: Reemplazar con el token real
-                user: {
-                    id: 'TU_USER_ID_AQUI' // IMPORTANTE: Reemplazar con el ID de usuario real
-                }
-            };
             const CACHE_DURATION = 5 * 60 * 1000; // 5 minutos
+            
+            // --- CONFIGURACIÓN DE SUPABASE ---
+            // IMPORTANTE: Reemplaza con la URL y la clave anónima de tu proyecto de Supabase
+            const SUPABASE_URL = 'TU_SUPABASE_URL'; 
+            const SUPABASE_ANON_KEY = 'TU_SUPABASE_ANON_KEY';
+            const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
 
             // --- ESTADO DE LA APLICACIÓN ---
             let state = {
+                session: null, // Se llenará con la sesión real de Supabase
                 medicamentos: [],
                 clientes: [],
                 items: [],
@@ -105,8 +108,8 @@
 
             // Carga los datos de medicamentos y clientes desde la API
             async function loadData() {
-                if (!session?.access_token || session.access_token === 'TU_ACCESS_TOKEN_AQUI') {
-                    alert('Error de configuración: Por favor, introduce un access token real en el script.');
+                if (!state.session) {
+                    alert('No hay una sesión de usuario activa. Por favor, inicie sesión.');
                     return;
                 }
                 
@@ -119,7 +122,7 @@
                 } else {
                     try {
                         setState({ isLoading: true });
-                        const headers = { 'Authorization': `Bearer ${session.access_token}` };
+                        const headers = { 'Authorization': `Bearer ${state.session.access_token}` };
                         const [medRes, clientRes] = await Promise.all([
                             fetch(`${API_URL}/medicamentos`, { headers }),
                             fetch(`${API_URL}/clientes`, { headers })
@@ -185,7 +188,7 @@
                 setState({ isLoading: true });
 
                 const ventaData = {
-                    usuarioId: session.user.id,
+                    usuarioId: state.session.user.id,
                     clienteId: state.clienteId ? parseInt(state.clienteId) : null,
                     items: state.items.map(item => ({
                         medicamento_id: parseInt(item.medicamentoId),
@@ -198,7 +201,7 @@
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
-                            'Authorization': `Bearer ${session.access_token}`
+                            'Authorization': `Bearer ${state.session.access_token}`
                         },
                         body: JSON.stringify(ventaData)
                     });
@@ -327,8 +330,30 @@
                 }
             });
 
-            // Cargar datos iniciales al cargar la página
-            loadData();
+            // --- INICIALIZACIÓN ---
+            async function initialize() {
+                if(SUPABASE_URL === 'TU_SUPABASE_URL' || SUPABASE_ANON_KEY === 'TU_SUPABASE_ANON_KEY') {
+                    alert('Error de configuración: Por favor, introduce tu URL y clave anónima de Supabase en el script.');
+                    return;
+                }
+
+                const { data, error } = await supabase.auth.getSession();
+                if (error) {
+                    alert('Error al obtener la sesión de Supabase.');
+                    return;
+                }
+                if (!data.session) {
+                    alert('No hay sesión activa. Por favor, inicia sesión.');
+                    // Opcional: Redirigir a la página de login
+                    // window.location.href = '/login.html'; 
+                    return;
+                }
+
+                state.session = data.session;
+                loadData(); // Cargar datos después de obtener la sesión
+            }
+
+            initialize();
         });
     </script>
 </body>
