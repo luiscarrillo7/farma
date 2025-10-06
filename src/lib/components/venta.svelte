@@ -21,7 +21,7 @@
     }
     session = data.session;
     await loadData();
-    addItem(); // primer item por defecto
+    addItem(); // primer ítem por defecto
   });
 
   async function loadData() {
@@ -91,7 +91,7 @@
       const result = await res.json();
       if (!res.ok) throw new Error(result.message || 'Error al registrar venta');
 
-      alert(`✅ Venta registrada! ID: ${result.venta_id} Total: $${result.total_calculado}`);
+      alert(`✅ Venta registrada! ID: ${result.venta_id} Total: S/ ${result.total_calculado}`);
       items = [];
       addItem();
       clienteId = '';
@@ -137,7 +137,9 @@
               on:change={(e) => updateItem(item.id, 'medicamentoId', parseInt(e.target.value))}
             >
               {#each medicamentos as m}
-                <option value={m.id}>{m.nombre} ({m.presentacion})</option>
+                <option value={m.id}>
+                  {m.nombre_comercial} ({m.forma_farmaceutica})
+                </option>
               {/each}
             </select>
 
@@ -152,14 +154,14 @@
             <input
               type="text"
               class="col-span-2 p-2 border rounded text-center bg-gray-50"
-              value={`$${(medicamentos.find(m => m.id == item.medicamentoId)?.precio_venta || 0).toFixed(2)}`}
+              value={`S/ ${(medicamentos.find(m => m.id == item.medicamentoId)?.precio_venta || 0).toFixed(2)}`}
               disabled
             />
 
             <input
               type="text"
               class="col-span-2 p-2 border rounded text-center font-semibold bg-gray-100"
-              value={`$${(item.cantidad * (medicamentos.find(m => m.id == item.medicamentoId)?.precio_venta || 0)).toFixed(2)}`}
+              value={`S/ ${(item.cantidad * (medicamentos.find(m => m.id == item.medicamentoId)?.precio_venta || 0)).toFixed(2)}`}
               disabled
             />
 
@@ -184,7 +186,7 @@
       <div class="bg-gray-50 p-4 rounded-lg border">
         <div class="text-right">
           <span class="text-lg font-semibold">Total General: </span>
-          <span class="text-2xl font-bold text-green-600">${totalGeneral.toFixed(2)}</span>
+          <span class="text-2xl font-bold text-green-600">S/ {totalGeneral.toFixed(2)}</span>
         </div>
       </div>
 
