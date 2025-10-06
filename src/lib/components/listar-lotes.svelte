@@ -33,6 +33,7 @@
         <tr>
           <th class="border p-2">ID</th>
           <th class="border p-2">Medicamento</th>
+          <th class="border p-2">Categoría</th>
           <th class="border p-2">Proveedor</th>
           <th class="border p-2">Ingreso</th>
           <th class="border p-2">Vencimiento</th>
@@ -44,14 +45,19 @@
       <tbody>
         {#each lotes as lote}
           <tr class="hover:bg-gray-50">
-            <td class="border p-2">{lote.id}</td>
-            <td class="border p-2">{lote.medicamentos?.nombre}</td>
+            <td class="border p-2 text-center">{lote.id}</td>
+            <td class="border p-2">{lote.medicamentos?.nombre_comercial}</td>
+            <td class="border p-2">{lote.medicamentos?.categoria}</td>
             <td class="border p-2">{lote.proveedores?.nombre}</td>
-            <td class="border p-2">{new Date(lote.fecha_ingreso).toLocaleDateString()}</td>
-            <td class="border p-2">{lote.fecha_vencimiento}</td>
+            <td class="border p-2 text-center">
+              {new Date(lote.fecha_ingreso).toLocaleDateString('es-PE')}
+            </td>
+            <td class="border p-2 text-center">
+              {new Date(lote.fecha_vencimiento).toLocaleDateString('es-PE')}
+            </td>
             <td class="border p-2 text-center">{lote.cantidad_inicial}</td>
             <td class="border p-2 text-center">{lote.cantidad_actual}</td>
-            <td class="border p-2 text-right">S/ {lote.precio_compra.toFixed(2)}</td>
+            <td class="border p-2 text-right">S/ {lote.precio_compra?.toFixed(2)}</td>
           </tr>
         {/each}
       </tbody>
