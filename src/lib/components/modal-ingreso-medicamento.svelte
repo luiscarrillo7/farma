@@ -1,23 +1,25 @@
 <script>
+  import { onMount } from 'svelte';
+
   let open = false;
 
-  // Campos del formulario adaptados a la nueva estructura de tu API
-  let nombre_comercial = "";
-  let nombre_generico = "";
-  let forma_farmaceutica = "";
+  // Variables alineadas con lo que espera el backend
+  let nombreComercial = "";
+  let nombreGenerico = "";
   let concentracion = "";
+  let formaFarmaceutica = "";
   let categoria = "";
   let laboratorio = "";
-  let precio_venta = null;
+  let precioVenta = null;
 
   function resetForm() {
-    nombre_comercial = "";
-    nombre_generico = "";
-    forma_farmaceutica = "";
+    nombreComercial = "";
+    nombreGenerico = "";
     concentracion = "";
+    formaFarmaceutica = "";
     categoria = "";
     laboratorio = "";
-    precio_venta = null;
+    precioVenta = null;
   }
 
   function close() {
@@ -28,27 +30,30 @@
   async function agregarMedicamento(event) {
     event.preventDefault();
 
-    if (!nombre_comercial || !precio_venta) {
-      alert("Por favor, complete los campos obligatorios: Nombre comercial y Precio de venta.");
+    if (!nombreComercial || !precioVenta) {
+      alert("Por favor, complete los campos obligatorios: Nombre Comercial y Precio de Venta.");
       return;
     }
 
-const response = await fetch("https://farmacia-269414280318.europe-west1.run.app/medicamentos", {
-  method: "POST",
-  headers: {
-    "Content-Type": "application/json",
-  },
-  body: JSON.stringify({
-    nombreComercial: nombre,
-    nombreGenerico: "", // Puedes agregar campo real si lo tienes en el formulario
-    concentracion: concentracion,
-    formaFarmaceutica: presentacion,
-    categoria: categoria,
-    laboratorio: codigoComercial, // o cámbialo si tienes un campo de laboratorio real
-    precioVenta: parseFloat(precioVenta)
-  })
-});
+    const payload = {
+      nombreComercial,
+      nombreGenerico,
+      concentracion,
+      formaFarmaceutica,
+      categoria,
+      laboratorio,
+      precioVenta: parseFloat(precioVenta)
+    };
 
+    console.log("📤 Enviando a API:", payload);
+
+    const response = await fetch("https://farmacia-269414280318.europe-west1.run.app/medicamentos", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload)
+    });
 
     if (response.ok) {
       alert("✅ Medicamento agregado con éxito");
@@ -58,9 +63,9 @@ const response = await fetch("https://farmacia-269414280318.europe-west1.run.app
       const textResponse = await response.text();
       try {
         const error = JSON.parse(textResponse);
-        alert("❌ Error: " + (error.detail || "Error al guardar el medicamento"));
-      } catch (e) {
-        alert(`❌ Error del servidor (código ${response.status}): ${textResponse || "Sin detalles adicionales."}`);
+        alert("❌ Error: " + (error.detail || error.error || "Error al guardar el medicamento"));
+      } catch {
+        alert(`❌ Error del servidor (${response.status}): ${textResponse || "Sin detalles."}`);
       }
     }
   }
@@ -102,7 +107,6 @@ const response = await fetch("https://farmacia-269414280318.europe-west1.run.app
   </style>
 </svelte:head>
 
-<!-- Botón para abrir el modal -->
 <button
   on:click={() => (open = true)}
   class="bg-purple-600 text-white font-semibold px-4 py-2 rounded-lg shadow hover:bg-purple-700 transition duration-200"
@@ -119,7 +123,7 @@ const response = await fetch("https://farmacia-269414280318.europe-west1.run.app
       role="button"
       tabindex="-1"
     ></div>
-    
+
     <div class="modal-content">
       <div class="flex justify-between items-center p-4 border-b">
         <h2 class="text-xl font-bold text-gray-800">Registrar Nuevo Medicamento</h2>
@@ -131,42 +135,42 @@ const response = await fetch("https://farmacia-269414280318.europe-west1.run.app
       </div>
 
       <form on:submit={agregarMedicamento} class="p-6 space-y-4 overflow-y-auto" style="max-height: calc(90vh - 65px);">
-        
+
         <div>
-          <label for="nombre_comercial" class="block text-sm font-medium text-gray-700 mb-1">Nombre Comercial <span class="text-red-500">*</span></label>
-          <input id="nombre_comercial" type="text" required bind:value={nombre_comercial} class="w-full border-gray-300 rounded-md shadow-sm focus:ring-purple-500 focus:border-purple-500" placeholder="Ej: Amoxicilina" />
+          <label class="block text-sm font-medium text-gray-700 mb-1">Nombre Comercial <span class="text-red-500">*</span></label>
+          <input type="text" required bind:value={nombreComercial} placeholder="Ej: Paracetamol" class="w-full border-gray-300 rounded-md shadow-sm focus:ring-purple-500 focus:border-purple-500" />
         </div>
 
         <div>
-          <label for="nombre_generico" class="block text-sm font-medium text-gray-700 mb-1">Nombre Genérico</label>
-          <input id="nombre_generico" type="text" bind:value={nombre_generico} class="w-full border-gray-300 rounded-md shadow-sm focus:ring-purple-500 focus:border-purple-500" placeholder="Ej: Amoxicilina base" />
+          <label class="block text-sm font-medium text-gray-700 mb-1">Nombre Genérico</label>
+          <input type="text" bind:value={nombreGenerico} placeholder="Ej: Paracetamol Genérico" class="w-full border-gray-300 rounded-md shadow-sm focus:ring-purple-500 focus:border-purple-500" />
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label for="forma_farmaceutica" class="block text-sm font-medium text-gray-700 mb-1">Forma Farmacéutica</label>
-            <input id="forma_farmaceutica" type="text" bind:value={forma_farmaceutica} class="w-full border-gray-300 rounded-md shadow-sm focus:ring-purple-500 focus:border-purple-500" placeholder="Ej: Cápsula" />
+            <label class="block text-sm font-medium text-gray-700 mb-1">Concentración</label>
+            <input type="text" bind:value={concentracion} placeholder="Ej: 500mg" class="w-full border-gray-300 rounded-md shadow-sm focus:ring-purple-500 focus:border-purple-500" />
           </div>
           <div>
-            <label for="concentracion" class="block text-sm font-medium text-gray-700 mb-1">Concentración</label>
-            <input id="concentracion" type="text" bind:value={concentracion} class="w-full border-gray-300 rounded-md shadow-sm focus:ring-purple-500 focus:border-purple-500" placeholder="Ej: 250mg" />
+            <label class="block text-sm font-medium text-gray-700 mb-1">Forma Farmacéutica</label>
+            <input type="text" bind:value={formaFarmaceutica} placeholder="Ej: Tableta" class="w-full border-gray-300 rounded-md shadow-sm focus:ring-purple-500 focus:border-purple-500" />
           </div>
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label for="categoria" class="block text-sm font-medium text-gray-700 mb-1">Categoría</label>
-            <input id="categoria" type="text" bind:value={categoria} class="w-full border-gray-300 rounded-md shadow-sm focus:ring-purple-500 focus:border-purple-500" placeholder="Ej: Antibiótico" />
+            <label class="block text-sm font-medium text-gray-700 mb-1">Categoría</label>
+            <input type="text" bind:value={categoria} placeholder="Ej: Analgésico" class="w-full border-gray-300 rounded-md shadow-sm focus:ring-purple-500 focus:border-purple-500" />
           </div>
           <div>
-            <label for="laboratorio" class="block text-sm font-medium text-gray-700 mb-1">Laboratorio</label>
-            <input id="laboratorio" type="text" bind:value={laboratorio} class="w-full border-gray-300 rounded-md shadow-sm focus:ring-purple-500 focus:border-purple-500" placeholder="Ej: Maver" />
+            <label class="block text-sm font-medium text-gray-700 mb-1">Laboratorio</label>
+            <input type="text" bind:value={laboratorio} placeholder="Ej: Maver" class="w-full border-gray-300 rounded-md shadow-sm focus:ring-purple-500 focus:border-purple-500" />
           </div>
         </div>
 
         <div>
-          <label for="precio_venta" class="block text-sm font-medium text-gray-700 mb-1">Precio Venta (S/)<span class="text-red-500">*</span></label>
-          <input id="precio_venta" type="number" step="0.01" min="0" required bind:value={precio_venta} class="w-full border-gray-300 rounded-md shadow-sm focus:ring-purple-500 focus:border-purple-500" placeholder="Ej: 12.50" />
+          <label class="block text-sm font-medium text-gray-700 mb-1">Precio Venta (S/)</label>
+          <input type="number" step="0.01" min="0" required bind:value={precioVenta} placeholder="Ej: 15.00" class="w-full border-gray-300 rounded-md shadow-sm focus:ring-purple-500 focus:border-purple-500" />
         </div>
 
         <div class="flex justify-end gap-4 pt-4 mt-4 border-t">
