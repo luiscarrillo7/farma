@@ -33,21 +33,22 @@
       return;
     }
 
-    const response = await fetch("https://farmacia-269414280318.europe-west1.run.app/medicamentos", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        nombre_comercial,
-        nombre_generico,
-        forma_farmaceutica,
-        concentracion,
-        categoria,
-        laboratorio,
-        precio_venta: parseFloat(precio_venta)
-      })
-    });
+const response = await fetch("https://farmacia-269414280318.europe-west1.run.app/medicamentos", {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+    nombreComercial: nombre,
+    nombreGenerico: "", // Puedes agregar campo real si lo tienes en el formulario
+    concentracion: concentracion,
+    formaFarmaceutica: presentacion,
+    categoria: categoria,
+    laboratorio: codigoComercial, // o cámbialo si tienes un campo de laboratorio real
+    precioVenta: parseFloat(precioVenta)
+  })
+});
+
 
     if (response.ok) {
       alert("✅ Medicamento agregado con éxito");
