@@ -65,43 +65,47 @@
     }, 0);
   }
 
-  async function submitVenta() {
-    if (items.length === 0) return alert('Agrega al menos un producto.');
-
-    const ventaData = {
-      usuarioId: session.user.id,
-      clienteId: clienteId ? parseInt(clienteId) : null,
-      items: items.map((i) => ({
-        medicamento_id: parseInt(i.medicamentoId),
-        cantidad: parseInt(i.cantidad)
-      }))
-    };
-
-    try {
-      isLoading = true;
-      const res = await fetch(`${API_URL}/ventas`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${session.access_token}`
-        },
-        body: JSON.stringify(ventaData)
-      });
-
-      const result = await res.json();
-      if (!res.ok) throw new Error(result.message || 'Error al registrar venta');
-
-      alert(`✅ Venta registrada! ID: ${result.venta_id} Total: S/ ${result.total_calculado}`);
-      items = [];
-      addItem();
-      clienteId = '';
-      totalGeneral = 0;
-    } catch (e) {
-      alert(`❌ ${e.message}`);
-    } finally {
-      isLoading = false;
-    }
+async function submitVenta() {
+  if (items.length === 0) {
+    alert('Agrega al menos un producto.');
+    return;
   }
+
+  const ventaData = {
+    usuarioId: session.user.id, // 👈 camelCase
+    clienteId: clienteId ? parseInt(clienteId) : null, // 👈 camelCase
+    items: items.map((i) => ({
+      medicamentoId: parseInt(i.medicamentoId), // 👈 respeta el modelo del backend
+      cantidad: parseInt(i.cantidad)
+    }))
+  };
+
+  try {
+    isLoading = true;
+    const res = await fetch(`${API_URL}/ventas`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${session.access_token}`
+      },
+      body: JSON.stringify(ventaData)
+    });
+
+    const result = await res.json();
+
+    if (!res.ok) throw new Error(result.error || 'Error al registrar venta');
+
+    alert(`✅ Venta registrada con éxito`);
+    items = [];
+    clienteId = '';
+  } catch (e) {
+    console.error("❌ Error al registrar venta:", e);
+    alert(`❌ ${e.message}`);
+  } finally {
+    isLoading = false;
+  }
+}
+
 </script>
 
 <main class="container mx-auto p-6">
