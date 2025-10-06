@@ -71,14 +71,17 @@ async function submitVenta() {
     return;
   }
 
+  // Construimos el objeto exactamente como el modelo C#
   const ventaData = {
-    usuarioId: session.user.id, // 👈 camelCase
-    clienteId: clienteId ? parseInt(clienteId) : null, // 👈 camelCase
-    items: items.map((i) => ({
-      medicamentoId: parseInt(i.medicamentoId), // 👈 respeta el modelo del backend
+    usuarioId: session.user.id, // es un GUID en Supabase
+    clienteId: clienteId ? parseInt(clienteId) : null,
+    items: items.map(i => ({
+      medicamento_id: parseInt(i.medicamentoId),
       cantidad: parseInt(i.cantidad)
     }))
   };
+
+  console.log("📦 Enviando venta:", ventaData);
 
   try {
     isLoading = true;
@@ -92,14 +95,17 @@ async function submitVenta() {
     });
 
     const result = await res.json();
+    if (!res.ok) {
+      console.error("❌ Error respuesta API:", result);
+      throw new Error(result.error || 'Error al registrar venta');
+    }
 
-    if (!res.ok) throw new Error(result.error || 'Error al registrar venta');
-
-    alert(`✅ Venta registrada con éxito`);
+    alert(`✅ Venta registrada! ID: ${result.venta_id} Total: $${result.total_calculado}`);
     items = [];
+    addItem();
     clienteId = '';
+    totalGeneral = 0;
   } catch (e) {
-    console.error("❌ Error al registrar venta:", e);
     alert(`❌ ${e.message}`);
   } finally {
     isLoading = false;
