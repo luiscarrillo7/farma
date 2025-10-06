@@ -32,11 +32,12 @@
       <thead class="bg-gray-100">
         <tr>
           <th class="border p-2">ID</th>
-          <th class="border p-2">Código</th>
-          <th class="border p-2">Nombre</th>
-          <th class="border p-2">Presentación</th>
+          <th class="border p-2">Nombre Comercial</th>
+          <th class="border p-2">Nombre Genérico</th>
+          <th class="border p-2">Forma Farmacéutica</th>
           <th class="border p-2">Concentración</th>
           <th class="border p-2">Categoría</th>
+          <th class="border p-2">Laboratorio</th>
           <th class="border p-2">Precio Venta</th>
           <th class="border p-2">Creado</th>
         </tr>
@@ -45,13 +46,18 @@
         {#each medicamentos as med}
           <tr class="hover:bg-gray-50">
             <td class="border p-2">{med.id}</td>
-            <td class="border p-2">{med.codigo_comercial || 'N/A'}</td>
-            <td class="border p-2">{med.nombre}</td>
-            <td class="border p-2">{med.presentacion}</td>
+            <td class="border p-2 font-medium">{med.nombre_comercial}</td>
+            <td class="border p-2">{med.nombre_generico}</td>
+            <td class="border p-2">{med.forma_farmaceutica}</td>
             <td class="border p-2">{med.concentracion}</td>
             <td class="border p-2">{med.categoria}</td>
-            <td class="border p-2 text-right">S/ {med.precio_venta?.toFixed(2)}</td>
-            <td class="border p-2">{new Date(med.creado_en).toLocaleDateString()}</td>
+            <td class="border p-2">{med.laboratorio}</td>
+            <td class="border p-2 text-right">
+              S/ {med.precio_venta?.toFixed(2) ?? "0.00"}
+            </td>
+            <td class="border p-2">
+              {new Date(med.creado_en).toLocaleDateString()}
+            </td>
           </tr>
         {/each}
       </tbody>
