@@ -1,25 +1,23 @@
 <script>
-  import { onMount } from 'svelte';
-  // Ya no se necesita supabase aquí porque el endpoint es público
-  // import { supabase } from '$lib/supabaseClient';
-
   let open = false;
 
-  // Datos del formulario adaptados a tu base de datos
-  let nombre = "";
-  let codigoComercial = "";
+  // Campos del formulario adaptados a la nueva estructura de tu API
+  let nombre_comercial = "";
+  let nombre_generico = "";
+  let forma_farmaceutica = "";
   let concentracion = "";
-  let presentacion = "";
   let categoria = "";
-  let precioVenta = null;
+  let laboratorio = "";
+  let precio_venta = null;
 
   function resetForm() {
-    nombre = "";
-    codigoComercial = "";
+    nombre_comercial = "";
+    nombre_generico = "";
+    forma_farmaceutica = "";
     concentracion = "";
-    presentacion = "";
     categoria = "";
-    precioVenta = null;
+    laboratorio = "";
+    precio_venta = null;
   }
 
   function close() {
@@ -30,8 +28,8 @@
   async function agregarMedicamento(event) {
     event.preventDefault();
 
-    if (!nombre || !precioVenta) {
-      alert("Por favor, complete los campos obligatorios: Nombre y Precio de Venta.");
+    if (!nombre_comercial || !precio_venta) {
+      alert("Por favor, complete los campos obligatorios: Nombre comercial y Precio de venta.");
       return;
     }
 
@@ -41,13 +39,13 @@
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        // Payload corregido para coincidir con tu API y BD
-        nombre: nombre,
-        codigoComercial: codigoComercial,
-        concentracion: concentracion,
-        presentacion: presentacion,
-        categoria: categoria,
-        precioVenta: precioVenta,
+        nombre_comercial,
+        nombre_generico,
+        forma_farmaceutica,
+        concentracion,
+        categoria,
+        laboratorio,
+        precio_venta: parseFloat(precio_venta)
       })
     });
 
@@ -56,13 +54,13 @@
       close();
       location.reload();
     } else {
-        const textResponse = await response.text();
-        try {
-            const error = JSON.parse(textResponse);
-            alert("❌ Error: " + (error.detail || "Error al guardar el medicamento"));
-        } catch (e) {
-            alert(`❌ Error del servidor (código ${response.status}): ${textResponse || "Sin detalles adicionales."}`);
-        }
+      const textResponse = await response.text();
+      try {
+        const error = JSON.parse(textResponse);
+        alert("❌ Error: " + (error.detail || "Error al guardar el medicamento"));
+      } catch (e) {
+        alert(`❌ Error del servidor (código ${response.status}): ${textResponse || "Sin detalles adicionales."}`);
+      }
     }
   }
 </script>
@@ -96,7 +94,7 @@
       border-radius: 0.75rem;
       box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
       width: 100%;
-      max-width: 36rem; /* 576px */
+      max-width: 36rem;
       max-height: 90vh;
       overflow: hidden;
     }
@@ -134,37 +132,42 @@
       <form on:submit={agregarMedicamento} class="p-6 space-y-4 overflow-y-auto" style="max-height: calc(90vh - 65px);">
         
         <div>
-          <label for="nombre" class="block text-sm font-medium text-gray-700 mb-1">Nombre del Medicamento <span class="text-red-500">*</span></label>
-          <input id="nombre" type="text" required bind:value={nombre} class="w-full border-gray-300 rounded-md shadow-sm focus:ring-purple-500 focus:border-purple-500" placeholder="Ej: Paracetamol" />
-        </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-                <label for="codigoComercial" class="block text-sm font-medium text-gray-700 mb-1">Código Comercial</label>
-                <input id="codigoComercial" type="text" bind:value={codigoComercial} class="w-full border-gray-300 rounded-md shadow-sm focus:ring-purple-500 focus:border-purple-500" placeholder="Ej: MED-001" />
-            </div>
-            <div>
-                <label for="concentracion" class="block text-sm font-medium text-gray-700 mb-1">Concentración</label>
-                <input id="concentracion" type="text" bind:value={concentracion} class="w-full border-gray-300 rounded-md shadow-sm focus:ring-purple-500 focus:border-purple-500" placeholder="Ej: 500mg" />
-            </div>
-        </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-                <label for="presentacion" class="block text-sm font-medium text-gray-700 mb-1">Presentación</label>
-                <input id="presentacion" type="text" bind:value={presentacion} class="w-full border-gray-300 rounded-md shadow-sm focus:ring-purple-500 focus:border-purple-500" placeholder="Ej: Cápsula" />
-            </div>
-            <div>
-                <label for="categoria" class="block text-sm font-medium text-gray-700 mb-1">Categoría</label>
-                <input id="categoria" type="text" bind:value={categoria} class="w-full border-gray-300 rounded-md shadow-sm focus:ring-purple-500 focus:border-purple-500" placeholder="Ej: Analgésico" />
-            </div>
+          <label for="nombre_comercial" class="block text-sm font-medium text-gray-700 mb-1">Nombre Comercial <span class="text-red-500">*</span></label>
+          <input id="nombre_comercial" type="text" required bind:value={nombre_comercial} class="w-full border-gray-300 rounded-md shadow-sm focus:ring-purple-500 focus:border-purple-500" placeholder="Ej: Amoxicilina" />
         </div>
 
         <div>
-            <label for="precioVenta" class="block text-sm font-medium text-gray-700 mb-1">Precio Venta (S/) <span class="text-red-500">*</span></label>
-            <input id="precioVenta" type="number" step="0.01" min="0" required bind:value={precioVenta} class="w-full border-gray-300 rounded-md shadow-sm focus:ring-purple-500 focus:border-purple-500" placeholder="Ej: 15.00" />
+          <label for="nombre_generico" class="block text-sm font-medium text-gray-700 mb-1">Nombre Genérico</label>
+          <input id="nombre_generico" type="text" bind:value={nombre_generico} class="w-full border-gray-300 rounded-md shadow-sm focus:ring-purple-500 focus:border-purple-500" placeholder="Ej: Amoxicilina base" />
         </div>
-        
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label for="forma_farmaceutica" class="block text-sm font-medium text-gray-700 mb-1">Forma Farmacéutica</label>
+            <input id="forma_farmaceutica" type="text" bind:value={forma_farmaceutica} class="w-full border-gray-300 rounded-md shadow-sm focus:ring-purple-500 focus:border-purple-500" placeholder="Ej: Cápsula" />
+          </div>
+          <div>
+            <label for="concentracion" class="block text-sm font-medium text-gray-700 mb-1">Concentración</label>
+            <input id="concentracion" type="text" bind:value={concentracion} class="w-full border-gray-300 rounded-md shadow-sm focus:ring-purple-500 focus:border-purple-500" placeholder="Ej: 250mg" />
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label for="categoria" class="block text-sm font-medium text-gray-700 mb-1">Categoría</label>
+            <input id="categoria" type="text" bind:value={categoria} class="w-full border-gray-300 rounded-md shadow-sm focus:ring-purple-500 focus:border-purple-500" placeholder="Ej: Antibiótico" />
+          </div>
+          <div>
+            <label for="laboratorio" class="block text-sm font-medium text-gray-700 mb-1">Laboratorio</label>
+            <input id="laboratorio" type="text" bind:value={laboratorio} class="w-full border-gray-300 rounded-md shadow-sm focus:ring-purple-500 focus:border-purple-500" placeholder="Ej: Maver" />
+          </div>
+        </div>
+
+        <div>
+          <label for="precio_venta" class="block text-sm font-medium text-gray-700 mb-1">Precio Venta (S/)<span class="text-red-500">*</span></label>
+          <input id="precio_venta" type="number" step="0.01" min="0" required bind:value={precio_venta} class="w-full border-gray-300 rounded-md shadow-sm focus:ring-purple-500 focus:border-purple-500" placeholder="Ej: 12.50" />
+        </div>
+
         <div class="flex justify-end gap-4 pt-4 mt-4 border-t">
           <button type="button" on:click={close} class="px-4 py-2 rounded-md bg-gray-200 text-gray-800 hover:bg-gray-300 font-semibold">
             Cancelar
@@ -177,4 +180,3 @@
     </div>
   </div>
 {/if}
-
