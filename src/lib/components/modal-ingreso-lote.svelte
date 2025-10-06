@@ -1,7 +1,5 @@
 <script>
-  import { supabase } from '$lib/supabaseClient';
   import { onMount } from 'svelte';
-
   export let session;
 
   let open = false;
@@ -16,6 +14,7 @@
   let cantidadInicial = null;
   let precioCompra = null;
 
+  // Cargar medicamentos y proveedores
   onMount(async () => {
     try {
       const resMed = await fetch("https://farmacia-269414280318.europe-west1.run.app/medicamentos");
@@ -29,12 +28,13 @@
     }
   });
 
+  // Enviar nuevo lote
   async function agregarLote(event) {
     event.preventDefault();
 
     if (!medicamentoId || !proveedorId || !fechaIngreso || !fechaVencimiento || !cantidadInicial || !precioCompra) {
-        alert("Por favor, complete todos los campos obligatorios.");
-        return;
+      alert("Por favor, complete todos los campos obligatorios.");
+      return;
     }
 
     const token = session?.access_token;
@@ -42,23 +42,23 @@
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${token}`
+        ...(token ? { "Authorization": `Bearer ${token}` } : {})
       },
       body: JSON.stringify({
         medicamento_id: parseInt(medicamentoId),
         proveedor_id: parseInt(proveedorId),
         fecha_ingreso: fechaIngreso,
         fecha_vencimiento: fechaVencimiento,
-        cantidad_inicial: cantidadInicial,
-        cantidad_actual: cantidadInicial, 
-        precio_compra: precioCompra
+        cantidad_inicial: parseInt(cantidadInicial),
+        cantidad_actual: parseInt(cantidadInicial), 
+        precio_compra: parseFloat(precioCompra)
       })
     });
 
     if (response.ok) {
       alert("✅ Lote agregado con éxito");
       close();
-      location.reload(); 
+      location.reload();
     } else {
       const error = await response.json();
       alert("❌ Error: " + (error.detail || "Error al guardar el lote"));
@@ -80,7 +80,6 @@
   }
 </script>
 
-<!-- NUEVO: Estilos dedicados para el modal, copiados de tu componente 'venta' -->
 <svelte:head>
   <style>
     .modal-overlay {
@@ -107,10 +106,10 @@
     .modal-content {
       position: relative;
       background: white;
-      border-radius: 0.75rem; /* 12px */
+      border-radius: 0.75rem;
       box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
       width: 100%;
-      max-width: 32rem; /* 512px */
+      max-width: 32rem;
       max-height: 90vh;
       overflow: hidden;
     }
@@ -124,10 +123,8 @@
   Agregar Lote
 </button>
 
-<!-- Modal con la NUEVA estructura HTML -->
 {#if open}
   <div class="modal-overlay">
-    <!-- Fondo que al hacer clic cierra el modal -->
     <div 
       class="modal-backdrop"
       on:click={close}
@@ -135,10 +132,8 @@
       role="button"
       tabindex="-1"
     ></div>
-    
-    <!-- Contenido del modal -->
+
     <div class="modal-content">
-      
       <div class="flex justify-between items-center p-4 border-b">
         <h2 class="text-xl font-bold text-gray-800">Agregar Nuevo Lote</h2>
         <button on:click={close} aria-label="Cerrar" class="text-gray-400 hover:text-gray-600">
@@ -156,7 +151,7 @@
             <select id="medicamento" required bind:value={medicamentoId} class="w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
               <option disabled value="">-- Seleccione --</option>
               {#each medicamentos as m}
-                <option value={m.id}>{m.nombre}</option>
+                <option value={m.id}>{m.nombre_comercial}</option>
               {/each}
             </select>
           </div>
@@ -205,4 +200,3 @@
     </div>
   </div>
 {/if}
-
