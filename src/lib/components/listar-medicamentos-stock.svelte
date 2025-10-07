@@ -33,26 +33,27 @@
       <thead class="bg-gray-100">
         <tr>
           <th class="border p-2">ID</th>
-          <th class="border p-2">Código</th>
-          <th class="border p-2">Nombre</th>
-          <th class="border p-2">Presentación</th>
+          <th class="border p-2">Nombre comercial</th>
+          <th class="border p-2">Nombre generico</th>
           <th class="border p-2">Concentración</th>
           <th class="border p-2">Categoría</th>
-          <th class="border p-2">Stock</th>
+          <th class="border p-2">Laboratorio</th>
           <th class="border p-2">Precio Venta</th>
+          <th class="border p-2">Stock</th>
+          
         </tr>
       </thead>
       <tbody>
         {#each medicamentos as med}
           <tr class="hover:bg-gray-50">
             <td class="border p-2">{med.id}</td>
-            <td class="border p-2">{med.codigo_comercial || 'N/A'}</td>
-            <td class="border p-2">{med.nombre}</td>
-            <td class="border p-2">{med.presentacion}</td>
+            <td class="border p-2">{med.nombre_comercial || 'N/A'}</td>
+            <td class="border p-2">{med.nombre_generico}</td>
             <td class="border p-2">{med.concentracion}</td>
             <td class="border p-2">{med.categoria}</td>
+            <td class="border p-2">{med.laboratorio}</td> 
+            <td class="border p-2 text-right">S/ {med.precio?.toFixed(2)}</td>
             <td class="border p-2 text-center font-semibold">{med.stock}</td>
-            <td class="border p-2 text-right">S/ {med.precio_venta?.toFixed(2)}</td>
           </tr>
         {/each}
       </tbody>
