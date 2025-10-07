@@ -35,6 +35,7 @@
           <th class="border p-2">ID</th>
           <th class="border p-2">Nombre comercial</th>
           <th class="border p-2">Nombre generico</th>
+          <th class="border p-2">forma farmacia</th>
           <th class="border p-2">Concentración</th>
           <th class="border p-2">Categoría</th>
           <th class="border p-2">Laboratorio</th>
@@ -49,6 +50,7 @@
             <td class="border p-2">{med.id}</td>
             <td class="border p-2">{med.nombre_comercial || 'N/A'}</td>
             <td class="border p-2">{med.nombre_generico}</td>
+            <td class="border p-2">{med.forma_farmaceutica}</td>
             <td class="border p-2">{med.concentracion}</td>
             <td class="border p-2">{med.categoria}</td>
             <td class="border p-2">{med.laboratorio}</td> 
