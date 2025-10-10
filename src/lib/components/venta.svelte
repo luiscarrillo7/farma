@@ -5,6 +5,7 @@
   import pdfMake from "pdfmake/build/pdfmake";
   import pdfFonts from "pdfmake/build/vfs_fonts";
   pdfMake.vfs = pdfFonts.pdfMake.vfs;
+
   let session = null;
   let clientes = [];
   let medicamentos = [];
@@ -23,7 +24,7 @@
     }
     session = data.session;
     await loadData();
-    addItem(); // primer ítem por defecto
+    addItem();
   });
 
   async function loadData() {
@@ -67,53 +68,113 @@
     }, 0);
   }
 
-async function submitVenta() {
-  if (items.length === 0) {
-    alert('Agrega al menos un producto.');
-    return;
-  }
-
-  // Construimos el objeto exactamente como el modelo C#
-  const ventaData = {
-    usuarioId: session.user.id, // es un GUID en Supabase
-    clienteId: clienteId ? parseInt(clienteId) : null,
-    items: items.map(i => ({
-      medicamento_id: parseInt(i.medicamentoId),
-      cantidad: parseInt(i.cantidad)
-    }))
-  };
-
-  console.log("📦 Enviando venta:", ventaData);
-
-  try {
-    isLoading = true;
-    const res = await fetch(`${API_URL}/ventas`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${session.access_token}`
-      },
-      body: JSON.stringify(ventaData)
-    });
-
-    const result = await res.json();
-    if (!res.ok) {
-      console.error("❌ Error respuesta API:", result);
-      throw new Error(result.error || 'Error al registrar venta');
+  async function submitVenta() {
+    if (items.length === 0) {
+      alert('Agrega al menos un producto.');
+      return;
     }
 
-    alert(`✅ Venta registrada! ID: ${result.venta_id} Total: $${result.total_calculado}`);
-    items = [];
-    addItem();
-    clienteId = '';
-    totalGeneral = 0;
-  } catch (e) {
-    alert(`❌ ${e.message}`);
-  } finally {
-    isLoading = false;
-  }
-}
+    const ventaData = {
+      usuarioId: session.user.id,
+      clienteId: clienteId ? parseInt(clienteId) : null,
+      items: items.map(i => ({
+        medicamento_id: parseInt(i.medicamentoId),
+        cantidad: parseInt(i.cantidad)
+      }))
+    };
 
+    try {
+      isLoading = true;
+      const res = await fetch(`${API_URL}/ventas`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify(ventaData)
+      });
+
+      const result = await res.json();
+      if (!res.ok) {
+        throw new Error(result.error || 'Error al registrar venta');
+      }
+
+      alert(`✅ Venta registrada! ID: ${result.venta_id} Total: S/ ${result.total_calculado.toFixed(2)}`);
+
+      // Generar boleta PDF
+      generarBoletaPDF(result);
+
+      // Reiniciar formulario
+      items = [];
+      addItem();
+      clienteId = '';
+      totalGeneral = 0;
+
+    } catch (e) {
+      alert(`❌ ${e.message}`);
+    } finally {
+      isLoading = false;
+    }
+  }
+
+  function generarBoletaPDF(result) {
+    const ventaId = result.venta_id;
+    const fecha = new Date().toLocaleString();
+    const cliente = clienteId
+      ? clientes.find(c => c.id == clienteId)?.nombre + " " + clientes.find(c => c.id == clienteId)?.apellido
+      : "Público General";
+
+    // Construir tabla de productos
+    const tableBody = [
+      [
+        { text: 'Descripción', bold: true, fontSize: 8 },
+        { text: 'Importe', bold: true, alignment: 'right', fontSize: 8 }
+      ]
+    ];
+
+    items.forEach(i => {
+      const med = medicamentos.find(m => m.id == i.medicamentoId);
+      const nombre = med?.nombre_comercial || 'Producto';
+      const subtotal = (i.cantidad * (med?.precio_venta || 0)).toFixed(2);
+      tableBody.push([
+        { text: `${i.cantidad} x ${nombre}`, fontSize: 8 },
+        { text: `S/ ${subtotal}`, alignment: 'right', fontSize: 8 }
+      ]);
+    });
+
+    tableBody.push([
+      { text: 'TOTAL', bold: true, fontSize: 9 },
+      { text: `S/ ${totalGeneral.toFixed(2)}`, alignment: 'right', bold: true, fontSize: 9 }
+    ]);
+
+    const docDefinition = {
+      pageSize: { width: 204, height: 'auto' }, // 72 mm aprox = 204 pt
+      pageMargins: [10, 10, 10, 10],
+      content: [
+        { text: 'BOTICA MI SALUD', style: 'header' },
+        { text: 'BOLETA ELECTRÓNICA', style: 'subheader' },
+        { text: `N°: ${ventaId}`, fontSize: 8, margin: [0, 0, 0, 4] },
+        { text: `Fecha: ${fecha}`, fontSize: 8 },
+        { text: `Cliente: ${cliente}`, fontSize: 8, margin: [0, 0, 0, 8] },
+        {
+          table: {
+            widths: ['*', 50],
+            body: tableBody
+          },
+          layout: 'noBorders'
+        },
+        { text: '---------------------------------------', alignment: 'center', margin: [0, 8, 0, 8] },
+        { text: '¡GRACIAS POR SU COMPRA!', style: 'footer' },
+      ],
+      styles: {
+        header: { fontSize: 12, bold: true, alignment: 'center', margin: [0, 0, 0, 2] },
+        subheader: { fontSize: 9, alignment: 'center', margin: [0, 0, 0, 4] },
+        footer: { fontSize: 9, alignment: 'center' }
+      }
+    };
+
+    pdfMake.createPdf(docDefinition).download(`Boleta_${ventaId}.pdf`);
+  }
 </script>
 
 <main class="container mx-auto p-6">
@@ -123,7 +184,6 @@ async function submitVenta() {
     </div>
 
     <div class="p-6 space-y-6">
-      <!-- Selector de Cliente -->
       <select bind:value={clienteId} class="w-full p-3 border rounded-lg">
         <option value="">Público General</option>
         {#each clientes as c}
@@ -131,7 +191,6 @@ async function submitVenta() {
         {/each}
       </select>
 
-      <!-- Items -->
       <div>
         <div class="grid grid-cols-12 gap-3 text-sm font-semibold text-gray-600 border-b pb-2">
           <div class="col-span-5">Producto</div>
@@ -189,12 +248,10 @@ async function submitVenta() {
         {/each}
       </div>
 
-      <!-- Botón añadir producto -->
       <button type="button" class="w-full bg-gray-100 p-2 rounded" on:click={addItem}>
         ➕ Añadir Producto
       </button>
 
-      <!-- Total -->
       <div class="bg-gray-50 p-4 rounded-lg border">
         <div class="text-right">
           <span class="text-lg font-semibold">Total General: </span>
@@ -202,7 +259,6 @@ async function submitVenta() {
         </div>
       </div>
 
-      <!-- Confirmar -->
       <button
         class="w-full bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-3 px-4 rounded-lg text-lg shadow-lg"
         on:click={submitVenta}
@@ -212,5 +268,4 @@ async function submitVenta() {
       </button>
     </div>
   </div>
-  
 </main>
