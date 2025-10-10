@@ -99,11 +99,15 @@
         throw new Error(result.error || 'Error al registrar venta');
       }
 
-      // Mostrar mensaje de éxito
       alert(`✅ Venta registrada! ID: ${result.venta_id} Total: $${result.total_calculado}`);
       
       // Generar PDF de la venta
-      await generatePDF(result);
+      try {
+        generatePDF(result);
+      } catch (pdfError) {
+        console.error('Error al generar PDF:', pdfError);
+        // No mostrar alerta aquí para evitar dos alertas
+      }
       
       // Limpiar formulario
       items = [];
@@ -117,74 +121,62 @@
     }
   }
 
-  async function generatePDF(ventaResult) {
-    try {
-      // Verificar si jsPDF está disponible
-      if (typeof jsPDF === 'undefined') {
-        throw new Error('La librería de PDF no está disponible');
-      }
-      
-      const doc = new jsPDF();
-      
-      // Configuración inicial
-      doc.setFontSize(20);
-      doc.text('Comprobante de Venta', 105, 15, { align: 'center' });
-      
-      // Información de la venta
-      doc.setFontSize(12);
-      doc.text(`ID de Venta: ${ventaResult.venta_id}`, 20, 30);
-      doc.text(`Fecha: ${new Date().toLocaleDateString()}`, 20, 40);
-      
-      // Información del cliente
-      if (clienteId) {
-        const cliente = clientes.find(c => c.id == clienteId);
-        if (cliente) {
-          doc.text(`Cliente: ${cliente.nombre} ${cliente.apellido}`, 20, 50);
-        }
-      } else {
-        doc.text('Cliente: Público General', 20, 50);
-      }
-      
-      // Encabezado de tabla
-      doc.setFontSize(10);
-      doc.text('Producto', 20, 70);
-      doc.text('Cant.', 100, 70);
-      doc.text('P.U.', 130, 70);
-      doc.text('Subtotal', 160, 70);
-      
-      // Línea divisoria
-      doc.line(20, 75, 190, 75);
-      
-      // Items de la venta
-      let yPos = 85;
-      // Usamos los items del componente en lugar de los de la respuesta
-      items.forEach(item => {
-        const medicamento = medicamentos.find(m => m.id == item.medicamentoId);
-        if (medicamento) {
-          const subtotal = item.cantidad * medicamento.precio_venta;
-          
-          doc.text(medicamento.nombre_comercial, 20, yPos);
-          doc.text(item.cantidad.toString(), 100, yPos);
-          doc.text(`S/ ${medicamento.precio_venta.toFixed(2)}`, 130, yPos);
-          doc.text(`S/ ${subtotal.toFixed(2)}`, 160, yPos);
-          
-          yPos += 10;
-        }
-      });
-      
-      // Total
-      yPos += 10;
-      doc.line(20, yPos, 190, yPos);
-      yPos += 10;
-      doc.setFontSize(12);
-      doc.text(`Total: S/ ${ventaResult.total_calculado.toFixed(2)}`, 160, yPos, { align: 'right' });
-      
-      // Guardar el PDF
-      doc.save(`venta_${ventaResult.venta_id}.pdf`);
-    } catch (error) {
-      console.error('Error al generar el PDF:', error);
-      alert(`Error al generar el PDF: ${error.message}`);
+  function generatePDF(ventaResult) {
+    const doc = new jsPDF();
+    
+    // Configuración inicial
+    doc.setFontSize(20);
+    doc.text('Comprobante de Venta', 105, 15, { align: 'center' });
+    
+    // Información de la venta
+    doc.setFontSize(12);
+    doc.text(`ID de Venta: ${ventaResult.venta_id}`, 20, 30);
+    doc.text(`Fecha: ${new Date().toLocaleDateString()}`, 20, 40);
+    
+    // Información del cliente
+    const cliente = clientes.find(c => c.id == clienteId);
+    if (cliente) {
+      doc.text(`Cliente: ${cliente.nombre} ${cliente.apellido}`, 20, 50);
+    } else {
+      doc.text('Cliente: Público General', 20, 50);
     }
+    
+    // Encabezado de tabla
+    doc.setFontSize(10);
+    doc.text('Producto', 20, 70);
+    doc.text('Cant.', 100, 70);
+    doc.text('P.U.', 130, 70);
+    doc.text('Subtotal', 160, 70);
+    
+    // Línea divisoria
+    doc.line(20, 75, 190, 75);
+    
+    // Items de la venta
+    let yPos = 85;
+    // Usamos los items del componente en lugar de los de la respuesta
+    items.forEach(item => {
+      const medicamento = medicamentos.find(m => m.id == item.medicamentoId);
+      if (medicamento) {
+        const subtotal = item.cantidad * medicamento.precio_venta;
+        
+        doc.text(medicamento.nombre_comercial, 20, yPos);
+        doc.text(item.cantidad.toString(), 100, yPos);
+        doc.text(`S/ ${medicamento.precio_venta.toFixed(2)}`, 130, yPos);
+        doc.text(`S/ ${subtotal.toFixed(2)}`, 160, yPos);
+        
+        yPos += 10;
+      }
+    });
+    
+    // Total
+    yPos += 10;
+    doc.line(20, yPos, 190, yPos);
+    yPos += 10;
+    doc.setFontSize(12);
+    doc.text(`Total: S/ ${ventaResult.total_calculado.toFixed(2)}`, 160, yPos, { align: 'right' });
+    
+    // Guardar el PDF
+    doc.save(`venta_${ventaResult.venta_id}.pdf`);
   }
 </script>
 
