@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import { supabase } from '$lib/supabaseClient';
   import { goto } from '$app/navigation';
+  import jsPDF from 'jspdf';
 
   let session = null;
   let clientes = [];
@@ -10,7 +11,6 @@
   let clienteId = '';
   let isLoading = false;
   let totalGeneral = 0;
-
   const API_URL = 'https://farmacia-269414280318.europe-west1.run.app';
 
   onMount(async () => {
@@ -65,53 +65,115 @@
     }, 0);
   }
 
-async function submitVenta() {
-  if (items.length === 0) {
-    alert('Agrega al menos un producto.');
-    return;
-  }
-
-  // Construimos el objeto exactamente como el modelo C#
-  const ventaData = {
-    usuarioId: session.user.id, // es un GUID en Supabase
-    clienteId: clienteId ? parseInt(clienteId) : null,
-    items: items.map(i => ({
-      medicamento_id: parseInt(i.medicamentoId),
-      cantidad: parseInt(i.cantidad)
-    }))
-  };
-
-  console.log("📦 Enviando venta:", ventaData);
-
-  try {
-    isLoading = true;
-    const res = await fetch(`${API_URL}/ventas`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${session.access_token}`
-      },
-      body: JSON.stringify(ventaData)
-    });
-
-    const result = await res.json();
-    if (!res.ok) {
-      console.error("❌ Error respuesta API:", result);
-      throw new Error(result.error || 'Error al registrar venta');
+  async function submitVenta() {
+    if (items.length === 0) {
+      alert('Agrega al menos un producto.');
+      return;
     }
 
-    alert(`✅ Venta registrada! ID: ${result.venta_id} Total: $${result.total_calculado}`);
-    items = [];
-    addItem();
-    clienteId = '';
-    totalGeneral = 0;
-  } catch (e) {
-    alert(`❌ ${e.message}`);
-  } finally {
-    isLoading = false;
-  }
-}
+    const ventaData = {
+      usuarioId: session.user.id,
+      clienteId: clienteId ? parseInt(clienteId) : null,
+      items: items.map(i => ({
+        medicamento_id: parseInt(i.medicamentoId),
+        cantidad: parseInt(i.cantidad)
+      }))
+    };
 
+    console.log("📦 Enviando venta:", ventaData);
+
+    try {
+      isLoading = true;
+      const res = await fetch(`${API_URL}/ventas`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify(ventaData)
+      });
+
+      const result = await res.json();
+      if (!res.ok) {
+        console.error("❌ Error respuesta API:", result);
+        throw new Error(result.error || 'Error al registrar venta');
+      }
+
+      alert(`✅ Venta registrada! ID: ${result.venta_id} Total: $${result.total_calculado}`);
+      
+      // Generar PDF de la venta
+      generatePDF(result);
+      
+      // Limpiar formulario
+      items = [];
+      addItem();
+      clienteId = '';
+      totalGeneral = 0;
+    } catch (e) {
+      alert(`❌ ${e.message}`);
+    } finally {
+      isLoading = false;
+    }
+  }
+
+  function generatePDF(ventaResult) {
+    const doc = new jsPDF();
+    
+    // Configuración inicial
+    doc.setFontSize(20);
+    doc.text('Comprobante de Venta', 105, 15, { align: 'center' });
+    
+    // Información de la venta
+    doc.setFontSize(12);
+    doc.text(`ID de Venta: ${ventaResult.venta_id}`, 20, 30);
+    doc.text(`Fecha: ${new Date().toLocaleDateString()}`, 20, 40);
+    
+    // Información del cliente
+    if (clienteId) {
+      const cliente = clientes.find(c => c.id == clienteId);
+      if (cliente) {
+        doc.text(`Cliente: ${cliente.nombre} ${cliente.apellido}`, 20, 50);
+      }
+    } else {
+      doc.text('Cliente: Público General', 20, 50);
+    }
+    
+    // Encabezado de tabla
+    doc.setFontSize(10);
+    doc.text('Producto', 20, 70);
+    doc.text('Cant.', 100, 70);
+    doc.text('P.U.', 130, 70);
+    doc.text('Subtotal', 160, 70);
+    
+    // Línea divisoria
+    doc.line(20, 75, 190, 75);
+    
+    // Items de la venta
+    let yPos = 85;
+    ventaResult.items.forEach(item => {
+      const medicamento = medicamentos.find(m => m.id == item.medicamento_id);
+      if (medicamento) {
+        const subtotal = item.cantidad * medicamento.precio_venta;
+        
+        doc.text(medicamento.nombre_comercial, 20, yPos);
+        doc.text(item.cantidad.toString(), 100, yPos);
+        doc.text(`S/ ${medicamento.precio_venta.toFixed(2)}`, 130, yPos);
+        doc.text(`S/ ${subtotal.toFixed(2)}`, 160, yPos);
+        
+        yPos += 10;
+      }
+    });
+    
+    // Total
+    yPos += 10;
+    doc.line(20, yPos, 190, yPos);
+    yPos += 10;
+    doc.setFontSize(12);
+    doc.text(`Total: S/ ${ventaResult.total_calculado.toFixed(2)}`, 160, yPos, { align: 'right' });
+    
+    // Guardar el PDF
+    doc.save(`venta_${ventaResult.venta_id}.pdf`);
+  }
 </script>
 
 <main class="container mx-auto p-6">
