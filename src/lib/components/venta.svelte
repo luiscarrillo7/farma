@@ -3,6 +3,7 @@
   import { supabase } from '$lib/supabaseClient';
   import { goto } from '$app/navigation';
   import jsPDF from 'jspdf';
+	import { Script } from 'vm';
 
   let session = null;
   let clientes = [];
@@ -123,11 +124,11 @@
 
 
   function generatePDF(ventaResult) {
-    // Crear PDF con tamaño personalizado: 72mm de ancho
+    // Crear PDF con tamaño personalizado: 72mm de ancho y 152mm de altura (150mm + 2mm margen inferior)
     const doc = new jsPDF({
       orientation: 'portrait',
       unit: 'mm',
-      format: [72, 150] // Ancho: 72mm, Altura: 150mm
+      format: [72, 152] // Ancho: 72mm, Altura: 150mm + 2mm margen inferior
     });
     
     // Configuración inicial
@@ -177,18 +178,18 @@
         
         yPos += 8;
         
-        // Añadir página si necesitamos más espacio
-        if (yPos > 130) {
+        // Añadir página si necesitamos más espacio (ajustado para nueva altura)
+        if (yPos > 132) { // 150 - 18 (margen superior) - 2 (margen inferior) = 130, pero dejamos un poco más de espacio
           doc.addPage();
           yPos = 15;
         }
       }
     });
     
-    // Total final (centrado)
+    // Total final (centrado) con margen inferior
     yPos += 5;
     doc.line(2, yPos, 70, yPos);
-    yPos += 5;
+    yPos += 8; // Aumentado el espacio antes del total para mejor separación
     doc.setFontSize(10);
     doc.text(`Total: S/ ${ventaResult.total_calculado.toFixed(2)}`, 36, yPos, { align: 'center' });
     
