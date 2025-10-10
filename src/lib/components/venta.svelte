@@ -5,7 +5,6 @@
   import pdfMake from "pdfmake/build/pdfmake";
   import pdfFonts from "pdfmake/build/vfs_fonts";
   pdfMake.vfs = pdfFonts.pdfMake.vfs;
-
   let session = null;
   let clientes = [];
   let medicamentos = [];
@@ -68,120 +67,53 @@
     }, 0);
   }
 
-  async function submitVenta() {
-    if (items.length === 0) {
-      alert('Agrega al menos un producto.');
-      return;
-    }
-
-    const ventaData = {
-      usuarioId: session.user.id,
-      clienteId: clienteId ? parseInt(clienteId) : null,
-      items: items.map(i => ({
-        medicamento_id: parseInt(i.medicamentoId),
-        cantidad: parseInt(i.cantidad)
-      }))
-    };
-
-    try {
-      isLoading = true;
-      const res = await fetch(`${API_URL}/ventas`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${session.access_token}`
-        },
-        body: JSON.stringify(ventaData)
-      });
-
-      const result = await res.json();
-      if (!res.ok) throw new Error(result.error || 'Error al registrar venta');
-
-      alert(`✅ Venta registrada! ID: ${result.venta_id}`);
-      generarBoletaPDF(result);
-
-      items = [];
-      addItem();
-      clienteId = '';
-      totalGeneral = 0;
-    } catch (e) {
-      alert(`❌ ${e.message}`);
-    } finally {
-      isLoading = false;
-    }
+async function submitVenta() {
+  if (items.length === 0) {
+    alert('Agrega al menos un producto.');
+    return;
   }
 
-  function generarBoletaPDF(venta) {
-    const fecha = new Date().toLocaleString();
-    const lineas = items.map((i) => {
-      const med = medicamentos.find((m) => m.id == i.medicamentoId);
-      const subtotal = i.cantidad * (med?.precio_venta || 0);
-      return [
-        { text: i.cantidad.toString(), width: 30 },
-        { text: med?.nombre_comercial || '', width: 90 },
-        { text: med?.precio_venta.toFixed(2) || '', width: 40, alignment: 'right' },
-        { text: subtotal.toFixed(2), width: 45, alignment: 'right' }
-      ];
+  // Construimos el objeto exactamente como el modelo C#
+  const ventaData = {
+    usuarioId: session.user.id, // es un GUID en Supabase
+    clienteId: clienteId ? parseInt(clienteId) : null,
+    items: items.map(i => ({
+      medicamento_id: parseInt(i.medicamentoId),
+      cantidad: parseInt(i.cantidad)
+    }))
+  };
+
+  console.log("📦 Enviando venta:", ventaData);
+
+  try {
+    isLoading = true;
+    const res = await fetch(`${API_URL}/ventas`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${session.access_token}`
+      },
+      body: JSON.stringify(ventaData)
     });
 
-    const total = totalGeneral;
-    const igv = total * 0.18;
-    const totalConIgv = total + igv;
+    const result = await res.json();
+    if (!res.ok) {
+      console.error("❌ Error respuesta API:", result);
+      throw new Error(result.error || 'Error al registrar venta');
+    }
 
-    const docDefinition = {
-      pageSize: { width: 204, height: 'auto' }, // 72 mm
-      pageMargins: [10, 10, 10, 10],
-      content: [
-        { text: 'SISFARMA', style: 'header', alignment: 'center', color: '#0a6f3c' },
-        { text: 'Sisfarma Central Lima S.A.C.', style: 'subheader', alignment: 'center' },
-        { text: 'R.U.C.: 11111111111', alignment: 'center' },
-        { text: 'Telf: 111-1111', alignment: 'center', margin: [0, 0, 0, 10] },
-        { text: `FECHA DE EMISIÓN: ${fecha}`, fontSize: 8, alignment: 'center', margin: [0, 0, 0, 10] },
-        { canvas: [{ type: 'line', x1: 0, y1: 0, x2: 184, y2: 0, lineWidth: 1 }] },
-        { text: `TICKET N° 001-000000001`, margin: [0, 4, 0, 4], alignment: 'center' },
-        { text: `CLIENTE: ${clienteId ? clientes.find(c => c.id == clienteId)?.nombre : 'Público en general'}`, fontSize: 9 },
-        { text: `USUARIO: ${session.user.email}`, fontSize: 9, margin: [0, 0, 0, 6] },
-        { canvas: [{ type: 'line', x1: 0, y1: 0, x2: 184, y2: 0, lineWidth: 1 }] },
-
-        {
-          table: {
-            widths: [30, 90, 40, 45],
-            body: [
-              [
-                { text: 'CANT.', bold: true },
-                { text: 'DESCRIPCIÓN', bold: true },
-                { text: 'P.UNIT.', bold: true, alignment: 'right' },
-                { text: 'IMPORTE', bold: true, alignment: 'right' }
-              ],
-              ...lineas
-            ]
-          },
-          layout: 'noBorders',
-          fontSize: 8,
-          margin: [0, 6, 0, 6]
-        },
-
-        { canvas: [{ type: 'line', x1: 0, y1: 0, x2: 184, y2: 0, lineWidth: 1 }] },
-        {
-          alignment: 'right',
-          fontSize: 9,
-          margin: [0, 4, 0, 0],
-          stack: [
-            `TOTAL A PAGAR: S/ ${total.toFixed(2)}`,
-            `IGV (18%): S/ ${igv.toFixed(2)}`,
-            `IMPORTE TOTAL: S/ ${totalConIgv.toFixed(2)}`
-          ]
-        },
-        { text: '\nGracias por su compra', alignment: 'center', italics: true, fontSize: 9 }
-      ],
-      styles: {
-        header: { fontSize: 14, bold: true },
-        subheader: { fontSize: 10 }
-      }
-    };
-
-    pdfMake.createPdf(docDefinition).open();
+    alert(`✅ Venta registrada! ID: ${result.venta_id} Total: $${result.total_calculado}`);
+    items = [];
+    addItem();
+    clienteId = '';
+    totalGeneral = 0;
+  } catch (e) {
+    alert(`❌ ${e.message}`);
+  } finally {
+    isLoading = false;
   }
+}
+
 </script>
 
 <main class="container mx-auto p-6">
@@ -280,4 +212,5 @@
       </button>
     </div>
   </div>
+  
 </main>
