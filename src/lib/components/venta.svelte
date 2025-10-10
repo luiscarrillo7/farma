@@ -122,58 +122,74 @@
   }
 
   function generatePDF(ventaResult) {
-    const doc = new jsPDF();
+    // Crear PDF con tamaño personalizado: 72mm de ancho
+    const doc = new jsPDF({
+      orientation: 'portrait',
+      unit: 'mm',
+      format: [72, 150] // Ancho: 72mm, Altura: 150mm
+    });
     
     // Configuración inicial
-    doc.setFontSize(20);
-    doc.text('Comprobante de Venta', 105, 15, { align: 'center' });
+    doc.setFontSize(14);
+    doc.text('Comprobante de Venta', 36, 15, { align: 'center' }); // Centrado en 72mm
     
     // Información de la venta
-    doc.setFontSize(12);
-    doc.text(`ID de Venta: ${ventaResult.venta_id}`, 20, 30);
-    doc.text(`Fecha: ${new Date().toLocaleDateString()}`, 20, 40);
+    doc.setFontSize(10);
+    doc.text(`ID: ${ventaResult.venta_id}`, 5, 30);
+    doc.text(`Fecha: ${new Date().toLocaleDateString()}`, 5, 40);
     
     // Información del cliente
     const cliente = clientes.find(c => c.id == clienteId);
     if (cliente) {
-      doc.text(`Cliente: ${cliente.nombre} ${cliente.apellido}`, 20, 50);
+      doc.text(`Cliente: ${cliente.nombre} ${cliente.apellido}`, 5, 50);
     } else {
-      doc.text('Cliente: Público General', 20, 50);
+      doc.text('Cliente: Público General', 5, 50);
     }
     
     // Encabezado de tabla
-    doc.setFontSize(10);
-    doc.text('Producto', 20, 70);
-    doc.text('Cant.', 100, 70);
-    doc.text('P.U.', 130, 70);
-    doc.text('Subtotal', 160, 70);
+    doc.setFontSize(8);
+    doc.text('Producto', 2, 70);
+    doc.text('Cant.', 45, 70);
+    doc.text('P.U.', 58, 70);
+    doc.text('Total', 65, 70);
     
     // Línea divisoria
-    doc.line(20, 75, 190, 75);
+    doc.line(2, 73, 70, 73);
     
     // Items de la venta
-    let yPos = 85;
-    // Usamos los items del componente en lugar de los de la respuesta
+    let yPos = 83;
     items.forEach(item => {
       const medicamento = medicamentos.find(m => m.id == item.medicamentoId);
       if (medicamento) {
         const subtotal = item.cantidad * medicamento.precio_venta;
         
-        doc.text(medicamento.nombre_comercial, 20, yPos);
-        doc.text(item.cantidad.toString(), 100, yPos);
-        doc.text(`S/ ${medicamento.precio_venta.toFixed(2)}`, 130, yPos);
-        doc.text(`S/ ${subtotal.toFixed(2)}`, 160, yPos);
+        // Truncar nombre de producto si es demasiado largo
+        let productName = medicamento.nombre_comercial;
+        if (productName.length > 20) {
+          productName = productName.substring(0, 17) + '...';
+        }
         
-        yPos += 10;
+        doc.text(productName, 2, yPos);
+        doc.text(item.cantidad.toString(), 45, yPos);
+        doc.text(`S/ ${medicamento.precio_venta.toFixed(2)}`, 58, yPos);
+        doc.text(`S/ ${subtotal.toFixed(2)}`, 65, yPos);
+        
+        yPos += 8;
+        
+        // Añadir página si necesitamos más espacio
+        if (yPos > 130) {
+          doc.addPage();
+          yPos = 15;
+        }
       }
     });
     
-    // Total
-    yPos += 10;
-    doc.line(20, yPos, 190, yPos);
-    yPos += 10;
-    doc.setFontSize(12);
-    doc.text(`Total: S/ ${ventaResult.total_calculado.toFixed(2)}`, 160, yPos, { align: 'right' });
+    // Total final
+    yPos += 5;
+    doc.line(2, yPos, 70, yPos);
+    yPos += 5;
+    doc.setFontSize(10);
+    doc.text(`Total: S/ ${ventaResult.total_calculado.toFixed(2)}`, 45, yPos, { align: 'right' });
     
     // Guardar el PDF
     doc.save(`venta_${ventaResult.venta_id}.pdf`);
