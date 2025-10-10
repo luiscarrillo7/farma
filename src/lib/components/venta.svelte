@@ -121,7 +121,7 @@
     }
   }
 
-  function generatePDF(ventaResult) {
+function generatePDF(ventaResult) {
     // Crear PDF con tamaño personalizado: 72mm de ancho
     const doc = new jsPDF({
       orientation: 'portrait',
@@ -146,12 +146,12 @@
       doc.text('Cliente: Público General', 5, 50);
     }
     
-    // Encabezado de tabla (redistribución de espacio)
+    // Encabezado de tabla (redistribución de espacio para Total)
     doc.setFontSize(8);
     doc.text('Producto', 2, 70);
-    doc.text('Cant.', 38, 70);
-    doc.text('P.U.', 52, 70);
-    doc.text('Total', 65, 70);
+    doc.text('Cant.', 30, 70);
+    doc.text('P.U.', 45, 70);
+    doc.text('Total', 58, 70);
     
     // Línea divisoria
     doc.line(2, 73, 70, 73);
@@ -163,16 +163,16 @@
       if (medicamento) {
         const subtotal = item.cantidad * medicamento.precio_venta;
         
-        // Truncar nombre de producto para dar más espacio a precios
+        // Truncar nombre de producto para dar más espacio a Total
         let productName = medicamento.nombre_comercial;
-        if (productName.length > 15) {
-          productName = productName.substring(0, 12) + '...';
+        if (productName.length > 12) {
+          productName = productName.substring(0, 9) + '...';
         }
         
         doc.text(productName, 2, yPos);
-        doc.text(item.cantidad.toString(), 38, yPos);
-        doc.text(`S/ ${medicamento.precio_venta.toFixed(2)}`, 52, yPos);
-        doc.text(`S/ ${subtotal.toFixed(2)}`, 65, yPos);
+        doc.text(item.cantidad.toString(), 30, yPos);
+        doc.text(`S/ ${medicamento.precio_venta.toFixed(2)}`, 45, yPos);
+        doc.text(`S/ ${subtotal.toFixed(2)}`, 58, yPos);
         
         yPos += 8;
         
@@ -189,7 +189,7 @@
     doc.line(2, yPos, 70, yPos);
     yPos += 5;
     doc.setFontSize(10);
-    doc.text(`Total: S/ ${ventaResult.total_calculado.toFixed(2)}`, 45, yPos, { align: 'right' });
+    doc.text(`Total: S/ ${ventaResult.total_calculado.toFixed(2)}`, 42, yPos, { align: 'right' });
     
     // Guardar el PDF
     doc.save(`venta_${ventaResult.venta_id}.pdf`);
