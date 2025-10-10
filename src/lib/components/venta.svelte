@@ -3,7 +3,7 @@
   import { supabase } from '$lib/supabaseClient';
   import { goto } from '$app/navigation';
   import pdfMake from "pdfmake/build/pdfmake";
-  import pdfFonts from "pdfmake/build/vfs_fonts";
+  import * as pdfFonts from "pdfmake/build/vfs_fonts";
   pdfMake.vfs = pdfFonts.pdfMake.vfs;
   let session = null;
   let clientes = [];
