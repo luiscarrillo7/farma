@@ -146,11 +146,11 @@
       doc.text('Cliente: Público General', 5, 50);
     }
     
-    // Encabezado de tabla (ajustado para más espacio en P.U. y Total)
+    // Encabezado de tabla (redistribución de espacio)
     doc.setFontSize(8);
     doc.text('Producto', 2, 70);
-    doc.text('Cant.', 42, 70);
-    doc.text('P.U.', 55, 70);
+    doc.text('Cant.', 38, 70);
+    doc.text('P.U.', 52, 70);
     doc.text('Total', 65, 70);
     
     // Línea divisoria
@@ -163,15 +163,15 @@
       if (medicamento) {
         const subtotal = item.cantidad * medicamento.precio_venta;
         
-        // Truncar nombre de producto para dar espacio a otras columnas
+        // Truncar nombre de producto para dar más espacio a precios
         let productName = medicamento.nombre_comercial;
-        if (productName.length > 18) {
-          productName = productName.substring(0, 15) + '...';
+        if (productName.length > 15) {
+          productName = productName.substring(0, 12) + '...';
         }
         
         doc.text(productName, 2, yPos);
-        doc.text(item.cantidad.toString(), 42, yPos);
-        doc.text(`S/ ${medicamento.precio_venta.toFixed(2)}`, 55, yPos);
+        doc.text(item.cantidad.toString(), 38, yPos);
+        doc.text(`S/ ${medicamento.precio_venta.toFixed(2)}`, 52, yPos);
         doc.text(`S/ ${subtotal.toFixed(2)}`, 65, yPos);
         
         yPos += 8;
@@ -194,6 +194,7 @@
     // Guardar el PDF
     doc.save(`venta_${ventaResult.venta_id}.pdf`);
   }
+
 </script>
 
 
