@@ -217,9 +217,9 @@ function generatePDF(ventaResult) {
     doc.text('Producto', 8, 50, { align: 'left' });
     doc.text('Cant.', 40, 50, { align: 'center' });
     doc.text('P.U.', 50, 50, { align: 'center' });
-    doc.text('Total', 62, 50, { align: 'right' });
+    doc.text('Total', 65, 50, { align: 'right' }); // Movido más a la derecha
     
-    doc.line(5, 52, 67, 52);
+    doc.line(5, 52, 67, 52); // Línea divisoria
     
     let yPos = 60;
     items.forEach(item => {
@@ -235,9 +235,9 @@ function generatePDF(ventaResult) {
         doc.text(productName, 8, yPos, { align: 'left' });
         doc.text(item.cantidad.toString(), 40, yPos, { align: 'center' });
         doc.text(`S/ ${item.precioUnitario.toFixed(2)}`, 50, yPos, { align: 'center' });
-        doc.text(`S/ ${subtotal.toFixed(2)}`, 62, yPos, { align: 'right' });
+        doc.text(`S/ ${subtotal.toFixed(2)}`, 65, yPos, { align: 'right' }); // Movido más a la derecha
         
-        yPos += 9; // Aumentado ligeramente el espaciado entre filas
+        yPos += 9; // Espaciado entre filas
         
         if (yPos > 135) {
           doc.addPage();
