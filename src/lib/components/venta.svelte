@@ -192,65 +192,77 @@
   }
 
 function generatePDF(ventaResult) {
+    // Calcular el alto dinámico según la cantidad de items
+    const itemsCount = items.filter(item => item.medicamentoId).length;
+    const baseHeight = 152; // Alto base
+    const itemHeight = 9; // Espacio por item
+    const extraHeight = 20; // Espacio extra para header/footer
+    const totalHeight = baseHeight + (itemsCount * itemHeight) + extraHeight;
+    
     const doc = new jsPDF({
       orientation: 'portrait',
       unit: 'mm',
-      format: [72, 152] // Mantenemos tu tamaño exacto
+      format: [72, totalHeight] // Alto dinámico
     });
     
+    // Posiciones base que se ajustarán dinámicamente
+    const baseY = 15;
+    const tableY = baseY + 35; // Posición inicial de la tabla
+    
     doc.setFontSize(14);
-    doc.text('BOTICA MI SALUD', 36, 15, { align: 'center' });
+    doc.text('BOTICA MI SALUD', 36, baseY, { align: 'center' });
     
     doc.setFontSize(10);
-    doc.text(`Venta ID: ${ventaResult.venta_id}`, 36, 25, { align: 'center' });
-    doc.text(`Fecha: ${new Date().toLocaleDateString()}`, 36, 32, { align: 'center' });
+    doc.text(`Venta ID: ${ventaResult.venta_id}`, 36, baseY + 10, { align: 'center' });
+    doc.text(`Fecha: ${new Date().toLocaleDateString()}`, 36, baseY + 17, { align: 'center' });
     
     const cliente = clientes.find(c => c.id == clienteId);
     if (cliente) {
-      doc.text(`Cliente: ${cliente.nombre} ${cliente.apellido}`, 36, 39, { align: 'center' });
+      doc.text(`Cliente: ${cliente.nombre} ${cliente.apellido}`, 36, baseY + 24, { align: 'center' });
     } else {
-      doc.text('Cliente: Público General', 36, 39, { align: 'center' });
+      doc.text('Cliente: Público General', 36, baseY + 24, { align: 'center' });
     }
     
+    // Posiciones de la tabla que se escalan
+    const tableHeaderY = tableY;
+    const tableLineY = tableHeaderY + 2;
+    const firstItemY = tableHeaderY + 8;
+    
     doc.setFontSize(8);
-    // Ajustado para mejor espaciado
-    doc.text('Producto', 6, 50, { align: 'left' }); // Reducido 2mm
-    doc.text('Cant.', 38, 50, { align: 'center' }); // Movido 2mm a la izquierda
-    doc.text('P.U.', 46, 50, { align: 'center' }); // Movido 4mm a la izquierda
-    doc.text('Total', 68, 50, { align: 'right' }); // Movido 3mm más a la derecha
+    doc.text('Producto', 6, tableHeaderY, { align: 'left' });
+    doc.text('Cant.', 38, tableHeaderY, { align: 'center' });
+    doc.text('P.U.', 46, tableHeaderY, { align: 'center' });
+    doc.text('Total', 68, tableHeaderY, { align: 'right' });
     
-    doc.line(5, 52, 67, 52); // Línea divisoria
+    doc.line(5, tableLineY, 67, tableLineY);
     
-    let yPos = 60;
+    let yPos = firstItemY;
     items.forEach(item => {
       if (item.medicamentoId) {
         const subtotal = item.cantidad * item.precioUnitario;
         
-        // Ajustado truncado para mejor visualización
         let productName = item.nombreProducto;
         if (productName.length > 20) {
           productName = productName.substring(0, 17) + '...';
         }
         
-        doc.text(productName, 6, yPos, { align: 'left' }); // Reducido 2mm
-        doc.text(item.cantidad.toString(), 38, yPos, { align: 'center' }); // Movido 2mm a la izquierda
-        doc.text(`S/ ${item.precioUnitario.toFixed(2)}`, 46, yPos, { align: 'center' }); // Movido 4mm a la izquierda
-        doc.text(`S/ ${subtotal.toFixed(2)}`, 68, yPos, { align: 'right' }); // Movido 3mm más a la derecha
+        doc.text(productName, 6, yPos, { align: 'left' });
+        doc.text(item.cantidad.toString(), 38, yPos, { align: 'center' });
+        doc.text(`S/ ${item.precioUnitario.toFixed(2)}`, 46, yPos, { align: 'center' });
+        doc.text(`S/ ${subtotal.toFixed(2)}`, 68, yPos, { align: 'right' });
         
         yPos += 9; // Espaciado entre filas
-        
-        if (yPos > 135) {
-          doc.addPage();
-          yPos = 20;
-        }
       }
     });
     
-    yPos += 3;
-    doc.line(5, yPos, 67, yPos);
-    yPos += 8;
+    // Posiciones finales que escalan con el contenido
+    const finalLineY = yPos + 3;
+    const totalY = finalLineY + 8;
+    const bottomMargin = totalY + 5;
+    
+    doc.line(5, finalLineY, 67, finalLineY);
     doc.setFontSize(11);
-    doc.text(`TOTAL: S/ ${ventaResult.total_calculado.toFixed(2)}`, 36, yPos, { align: 'center' });
+    doc.text(`TOTAL: S/ ${ventaResult.total_calculado.toFixed(2)}`, 36, totalY, { align: 'center' });
     
     doc.save(`venta_${ventaResult.venta_id}.pdf`);
 }
