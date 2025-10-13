@@ -214,10 +214,10 @@ function generatePDF(ventaResult) {
     
     doc.setFontSize(8);
     // Ajustado para mejor espaciado
-    doc.text('Producto', 8, 50, { align: 'left' });
-    doc.text('Cant.', 40, 50, { align: 'center' });
-    doc.text('P.U.', 50, 50, { align: 'center' });
-    doc.text('Total', 65, 50, { align: 'right' }); // Movido más a la derecha
+    doc.text('Producto', 6, 50, { align: 'left' }); // Reducido 2mm
+    doc.text('Cant.', 38, 50, { align: 'center' }); // Movido 2mm a la izquierda
+    doc.text('P.U.', 46, 50, { align: 'center' }); // Movido 4mm a la izquierda
+    doc.text('Total', 68, 50, { align: 'right' }); // Movido 3mm más a la derecha
     
     doc.line(5, 52, 67, 52); // Línea divisoria
     
@@ -228,14 +228,14 @@ function generatePDF(ventaResult) {
         
         // Ajustado truncado para mejor visualización
         let productName = item.nombreProducto;
-        if (productName.length > 18) {
-          productName = productName.substring(0, 15) + '...';
+        if (productName.length > 20) {
+          productName = productName.substring(0, 17) + '...';
         }
         
-        doc.text(productName, 8, yPos, { align: 'left' });
-        doc.text(item.cantidad.toString(), 40, yPos, { align: 'center' });
-        doc.text(`S/ ${item.precioUnitario.toFixed(2)}`, 50, yPos, { align: 'center' });
-        doc.text(`S/ ${subtotal.toFixed(2)}`, 65, yPos, { align: 'right' }); // Movido más a la derecha
+        doc.text(productName, 6, yPos, { align: 'left' }); // Reducido 2mm
+        doc.text(item.cantidad.toString(), 38, yPos, { align: 'center' }); // Movido 2mm a la izquierda
+        doc.text(`S/ ${item.precioUnitario.toFixed(2)}`, 46, yPos, { align: 'center' }); // Movido 4mm a la izquierda
+        doc.text(`S/ ${subtotal.toFixed(2)}`, 68, yPos, { align: 'right' }); // Movido 3mm más a la derecha
         
         yPos += 9; // Espaciado entre filas
         
