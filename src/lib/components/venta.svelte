@@ -13,8 +13,8 @@
   let isLoading = false;
   let totalGeneral = 0;
 
-  // Modal
-  let showModalLotes = false;
+  // Estado del modal
+  let showModalLotes = { open: false, medicamentoId: null };
   let currentItemId = null;
 
   const API_URL = 'https://farmacia-269414280318.europe-west1.run.app';
@@ -90,13 +90,17 @@
     }, 0);
   }
 
-  // 🔹 Abrir modal para seleccionar lote
+  // 🔹 Abrir modal de lotes
   function abrirModalLotes(itemId) {
+    const item = items.find((i) => i.id === itemId);
     currentItemId = itemId;
-    showModalLotes = true;
+    showModalLotes = {
+      open: true,
+      medicamentoId: item.medicamentoId
+    };
   }
 
-  // 🔹 Manejar lote seleccionado
+  // 🔹 Manejar selección de lote
   function handleLoteSeleccionado(e) {
     const lote = e.detail;
     items = items.map((i) =>
@@ -104,7 +108,7 @@
         ? { ...i, loteId: lote.id, loteInfo: lote }
         : i
     );
-    showModalLotes = false;
+    showModalLotes = { open: false, medicamentoId: null };
   }
 
   // 🔹 Registrar venta
@@ -152,7 +156,7 @@
     }
   }
 
-  // 🔹 Generar PDF (boleta)
+  // 🔹 Generar PDF
   function generatePDF(ventaResult) {
     const doc = new jsPDF({
       orientation: 'portrait',
@@ -249,7 +253,7 @@
             <!-- Lote -->
             <div class="col-span-3 text-center">
               {#if item.loteInfo}
-                <div class="text-sm">
+                <div class="text-sm text-green-600 font-medium">
                   #{item.loteInfo.id} — Stock: {item.loteInfo.cantidad_actual}
                 </div>
               {:else}
@@ -309,9 +313,10 @@
   </div>
 
   <!-- Modal de Lotes -->
-  {#if showModalLotes}
+  {#if showModalLotes.open}
     <ModalLotes
-      on:close={() => (showModalLotes = false)}
+      medicamentoId={showModalLotes.medicamentoId}
+      on:close={() => (showModalLotes = { open: false, medicamentoId: null })}
       on:select={handleLoteSeleccionado}
     />
   {/if}
