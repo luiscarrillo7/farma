@@ -1,7 +1,7 @@
 <script>
   import { supabase } from '$lib/supabaseClient';
   import jsPDF from "jspdf";
-  import autoTable from "jspdf-autotable";
+  import "jspdf-autotable"; // ← Cambiado: importación como side-effect
 
   let { session } = $props();
 
@@ -119,7 +119,8 @@
       ];
     });
 
-    autoTable(doc, {
+    // ← Cambiado: usar doc.autoTable en lugar de autoTable(doc, ...)
+    doc.autoTable({
       startY: 40,
       head: [["Producto", "Cant.", "P.Unit.", "Subtotal"]],
       body: rows,
