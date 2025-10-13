@@ -86,12 +86,19 @@
       return;
     }
 
+    const sinLote = items.find(i => !i.loteId);
+    if (sinLote) {
+      alert('⚠️ Debes seleccionar un lote para todos los productos.');
+      return;
+    }
+
     const ventaData = {
       usuarioId: session.user.id,
       clienteId: clienteId ? parseInt(clienteId) : null,
       items: items.map(i => ({
         medicamento_id: parseInt(i.medicamentoId),
-        cantidad: parseInt(i.cantidad)
+        cantidad: parseInt(i.cantidad),
+        lote_id: parseInt(i.loteId)
       }))
     };
 
@@ -110,7 +117,7 @@
       if (!res.ok) throw new Error(result.error || 'Error al registrar venta');
 
       alert(`✅ Venta registrada! ID: ${result.venta_id} Total: S/ ${result.total_calculado}`);
-      
+
       // Generar PDF automáticamente
       generatePDF(result);
 
@@ -212,15 +219,26 @@
         {#each items as item (item.id)}
           <div class="grid grid-cols-12 gap-3 items-center mt-2">
             <!-- Producto -->
-            <select
-              class="col-span-5 p-2 border rounded"
-              bind:value={item.medicamentoId}
-              on:change={(e) => updateItem(item.id, 'medicamentoId', parseInt(e.target.value))}
-            >
-              {#each medicamentos as m}
-                <option value={m.id}>{m.nombre_comercial} ({m.forma_farmaceutica})</option>
-              {/each}
-            </select>
+            <div class="col-span-5 flex flex-col">
+              <select
+                class="p-2 border rounded cursor-pointer"
+                bind:value={item.medicamentoId}
+                on:change={(e) => {
+                  const medId = parseInt(e.target.value);
+                  updateItem(item.id, 'medicamentoId', medId);
+                  selectedMedicamento = medId;
+                  currentItemId = item.id;
+                  showModalLotes = true;
+                }}
+              >
+                {#each medicamentos as m}
+                  <option value={m.id}>{m.nombre_comercial} ({m.forma_farmaceutica})</option>
+                {/each}
+              </select>
+              {#if item.loteInfo}
+                <span class="text-xs text-gray-600 mt-1">Lote: #{item.loteInfo.id} (Stock: {item.loteInfo.stock})</span>
+              {/if}
+            </div>
 
             <!-- Cantidad -->
             <input
