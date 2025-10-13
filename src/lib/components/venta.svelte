@@ -1,26 +1,45 @@
 <script>
-  import { onMount } from 'svelte';
   import { supabase } from '$lib/supabaseClient';
   import { goto } from '$app/navigation';
   import jsPDF from 'jspdf';
-  import ModalLotes from '$lib/components/ModalLotes.svelte';
 
-  let session = null;
-  let clientes = [];
-  let medicamentos = [];
-  let items = [];
-  let clienteId = '';
-  let isLoading = false;
-  let totalGeneral = 0;
-
-  // Estado del modal
-  let showModalLotes = { open: false, medicamentoId: null };
-  let currentItemId = null;
-
+  let session = $state(null);
+  let clientes = $state([]);
+  let medicamentos = $state([]);
+  let lotes = $state([]);
+  let items = $state([]);
+  let clienteId = $state('');
+  let isLoading = $state(false);
+  let showLotesModal = $state(false);
+  let currentItemId = $state(null);
+  let cargandoLotes = $state(false);
+  let errorLotes = $state(null);
+  let busqueda = $state('');
+  
   const API_URL = 'https://farmacia-269414280318.europe-west1.run.app';
 
-  // 🔹 Carga inicial
-  onMount(async () => {
+  let totalGeneral = $derived(
+    items.reduce((sum, i) => sum + (i.cantidad * i.precioUnitario), 0)
+  );
+
+  let lotesFiltrados = $derived(
+    lotes.filter(lote => {
+      if (!busqueda) return lote.cantidad_actual > 0;
+      const termino = busqueda.toLowerCase();
+      return lote.cantidad_actual > 0 && (
+        lote.medicamentos?.nombre_comercial?.toLowerCase().includes(termino) ||
+        lote.numero_lote?.toLowerCase().includes(termino) ||
+        lote.medicamentos?.categoria?.toLowerCase().includes(termino) ||
+        lote.proveedores?.nombre?.toLowerCase().includes(termino)
+      );
+    })
+  );
+
+  $effect(() => {
+    loadSession();
+  });
+
+  async function loadSession() {
     const { data, error } = await supabase.auth.getSession();
     if (error || !data.session) {
       goto('/login');
@@ -28,11 +47,11 @@
     }
     session = data.session;
     await loadData();
-    addItem(); // primer ítem
-  });
+    addItem();
+  }
 
-  // 🔹 Cargar datos
   async function loadData() {
+    if (!session?.access_token) return;
     try {
       isLoading = true;
       const headers = { Authorization: `Bearer ${session.access_token}` };
@@ -49,84 +68,93 @@
     }
   }
 
-  // 🔹 Agregar ítem
-  function addItem() {
-    const defaultMed = medicamentos[0]?.id ?? 0;
-    items = [
-      ...items,
-      {
-        id: Date.now(),
-        medicamentoId: defaultMed,
-        cantidad: 1,
-        loteId: null,
-        loteInfo: null
-      }
-    ];
-    calcTotal();
-  }
-
-  // 🔹 Eliminar ítem
-  function removeItem(id) {
-    if (items.length > 1) {
-      items = items.filter((i) => i.id !== id);
-      calcTotal();
+  async function loadLotes() {
+    if (!session?.access_token) return;
+    try {
+      cargandoLotes = true;
+      errorLotes = null;
+      const headers = { Authorization: `Bearer ${session.access_token}` };
+      const res = await fetch(`${API_URL}/lotes`, { headers });
+      if (!res.ok) throw new Error("Error al cargar los lotes");
+      lotes = await res.json();
+    } catch (e) {
+      errorLotes = e.message;
+    } finally {
+      cargandoLotes = false;
     }
   }
 
-  // 🔹 Actualizar campo
+  function addItem() {
+    items = [...items, { 
+      id: Date.now(), 
+      medicamentoId: null, 
+      loteId: null,
+      nombreProducto: '',
+      numeroLote: '',
+      cantidad: 1,
+      precioUnitario: 0
+    }];
+  }
+
+  function removeItem(id) {
+    if (items.length > 1) {
+      items = items.filter((i) => i.id !== id);
+    }
+  }
+
   function updateItem(id, field, value) {
-    items = items.map((i) =>
-      i.id === id ? { ...i, [field]: value > 0 ? value : 1 } : i
-    );
-    calcTotal();
+    items = items.map((i) => (i.id === id ? { ...i, [field]: value } : i));
   }
 
-  // 🔹 Calcular total
-  function calcTotal() {
-    totalGeneral = items.reduce((sum, i) => {
-      const med = medicamentos.find((m) => m.id == i.medicamentoId);
-      const precio = med?.precio_venta || 0;
-      return sum + i.cantidad * precio;
-    }, 0);
-  }
-
-  // 🔹 Abrir modal de lotes
-  function abrirModalLotes(itemId) {
-    const item = items.find((i) => i.id === itemId);
+  async function openLotesModal(itemId) {
     currentItemId = itemId;
-    showModalLotes = {
-      open: true,
-      medicamentoId: item.medicamentoId
-    };
+    showLotesModal = true;
+    busqueda = '';
+    await loadLotes();
   }
 
-  // 🔹 Manejar selección de lote
-  function handleLoteSeleccionado(e) {
-    const lote = e.detail;
-    items = items.map((i) =>
-      i.id === currentItemId
-        ? { ...i, loteId: lote.id, loteInfo: lote }
-        : i
-    );
-    showModalLotes = { open: false, medicamentoId: null };
+  function selectLote(lote) {
+    if (currentItemId) {
+      updateItem(currentItemId, 'medicamentoId', lote.medicamento_id);
+      updateItem(currentItemId, 'loteId', lote.id);
+      updateItem(currentItemId, 'nombreProducto', lote.medicamentos?.nombre_comercial || 'Producto');
+      updateItem(currentItemId, 'numeroLote', lote.numero_lote);
+      updateItem(currentItemId, 'precioUnitario', lote.medicamentos?.precio_venta || 0);
+    }
+    closeLotesModal();
   }
 
-  // 🔹 Registrar venta
-  async function submitVenta() {
-    if (items.length === 0) return alert('Agrega al menos un producto.');
+  function closeLotesModal() {
+    showLotesModal = false;
+    currentItemId = null;
+    busqueda = '';
+  }
 
-    const sinLote = items.find((i) => !i.loteId);
-    if (sinLote) return alert('⚠️ Debes seleccionar un lote para todos los productos.');
+  async function submitVenta(e) {
+    e.preventDefault();
+    
+    if (items.length === 0) {
+      alert('Agrega al menos un producto.');
+      return;
+    }
+
+    const itemsSinProducto = items.filter(i => !i.medicamentoId);
+    if (itemsSinProducto.length > 0) {
+      alert('Por favor, selecciona un producto para todos los items.');
+      return;
+    }
 
     const ventaData = {
       usuarioId: session.user.id,
       clienteId: clienteId ? parseInt(clienteId) : null,
-      items: items.map((i) => ({
+      items: items.map(i => ({
         medicamento_id: parseInt(i.medicamentoId),
-        cantidad: parseInt(i.cantidad),
-        lote_id: parseInt(i.loteId)
+        lote_id: i.loteId ? parseInt(i.loteId) : null,
+        cantidad: parseInt(i.cantidad)
       }))
     };
+
+    console.log("📦 Enviando venta:", ventaData);
 
     try {
       isLoading = true;
@@ -140,15 +168,22 @@
       });
 
       const result = await res.json();
-      if (!res.ok) throw new Error(result.error || 'Error al registrar venta');
+      if (!res.ok) {
+        console.error("❌ Error respuesta API:", result);
+        throw new Error(result.error || 'Error al registrar venta');
+      }
 
-      alert(`✅ Venta registrada! ID: ${result.venta_id}`);
-      generatePDF(result);
-
-      clienteId = '';
+      alert(`✅ Venta registrada! ID: ${result.venta_id} Total: S/ ${result.total_calculado}`);
+      
+      try {
+        generatePDF(result);
+      } catch (pdfError) {
+        console.error('Error al generar PDF:', pdfError);
+      }
+      
       items = [];
       addItem();
-      totalGeneral = 0;
+      clienteId = '';
     } catch (e) {
       alert(`❌ ${e.message}`);
     } finally {
@@ -156,58 +191,65 @@
     }
   }
 
-  // 🔹 Generar PDF
   function generatePDF(ventaResult) {
     const doc = new jsPDF({
       orientation: 'portrait',
       unit: 'mm',
       format: [72, 152]
     });
-
+    
     doc.setFontSize(14);
-    doc.text('Comprobante de Venta', 36, 15, { align: 'center' });
-
+    doc.text('BOTICA MI SALUD', 36, 15, { align: 'center' });
+    
     doc.setFontSize(10);
-    doc.text(`ID: ${ventaResult.venta_id}`, 36, 30, { align: 'center' });
-    doc.text(`Fecha: ${new Date().toLocaleDateString()}`, 36, 38, { align: 'center' });
-
-    const cliente = clientes.find((c) => c.id == clienteId);
-    doc.text(
-      `Cliente: ${cliente ? `${cliente.nombre} ${cliente.apellido}` : 'Público General'}`,
-      36,
-      46,
-      { align: 'center' }
-    );
-
+    doc.text(`Venta ID: ${ventaResult.venta_id}`, 36, 25, { align: 'center' });
+    doc.text(`Fecha: ${new Date().toLocaleDateString()}`, 36, 32, { align: 'center' });
+    
+    const cliente = clientes.find(c => c.id == clienteId);
+    if (cliente) {
+      doc.text(`Cliente: ${cliente.nombre} ${cliente.apellido}`, 36, 39, { align: 'center' });
+    } else {
+      doc.text('Cliente: Público General', 36, 39, { align: 'center' });
+    }
+    
     doc.setFontSize(8);
-    doc.text('Producto', 10, 60);
-    doc.text('Cant.', 35, 60);
-    doc.text('P.U.', 48, 60);
-    doc.text('Total', 60, 60);
-    doc.line(5, 62, 67, 62);
-
-    let y = 70;
-    items.forEach((item) => {
-      const med = medicamentos.find((m) => m.id == item.medicamentoId);
-      if (med) {
-        const subtotal = item.cantidad * med.precio_venta;
-        const name =
-          med.nombre_comercial.length > 12
-            ? med.nombre_comercial.substring(0, 9) + '...'
-            : med.nombre_comercial;
-
-        doc.text(name, 10, y);
-        doc.text(item.cantidad.toString(), 35, y, { align: 'center' });
-        doc.text(`S/ ${med.precio_venta.toFixed(2)}`, 48, y, { align: 'center' });
-        doc.text(`S/ ${subtotal.toFixed(2)}`, 60, y, { align: 'center' });
-        y += 7;
+    doc.text('Producto', 12, 50, { align: 'left' });
+    doc.text('Cant.', 40, 50, { align: 'center' });
+    doc.text('P.U.', 50, 50, { align: 'center' });
+    doc.text('Total', 60, 50, { align: 'right' });
+    
+    doc.line(5, 52, 67, 52);
+    
+    let yPos = 60;
+    items.forEach(item => {
+      if (item.medicamentoId) {
+        const subtotal = item.cantidad * item.precioUnitario;
+        
+        let productName = item.nombreProducto;
+        if (productName.length > 15) {
+          productName = productName.substring(0, 12) + '...';
+        }
+        
+        doc.text(productName, 12, yPos, { align: 'left' });
+        doc.text(item.cantidad.toString(), 40, yPos, { align: 'center' });
+        doc.text(`S/ ${item.precioUnitario.toFixed(2)}`, 50, yPos, { align: 'center' });
+        doc.text(`S/ ${subtotal.toFixed(2)}`, 60, yPos, { align: 'right' });
+        
+        yPos += 7;
+        
+        if (yPos > 135) {
+          doc.addPage();
+          yPos = 20;
+        }
       }
     });
-
-    doc.line(5, y + 2, 67, y + 2);
-    doc.setFontSize(10);
-    doc.text(`Total: S/ ${ventaResult.total_calculado.toFixed(2)}`, 36, y + 10, { align: 'center' });
-
+    
+    yPos += 3;
+    doc.line(5, yPos, 67, yPos);
+    yPos += 8;
+    doc.setFontSize(11);
+    doc.text(`TOTAL: S/ ${ventaResult.total_calculado.toFixed(2)}`, 36, yPos, { align: 'center' });
+    
     doc.save(`venta_${ventaResult.venta_id}.pdf`);
   }
 </script>
@@ -218,106 +260,260 @@
       <h1 class="text-2xl font-bold text-white">Registrar Venta</h1>
     </div>
 
-    <div class="p-6 space-y-6">
-      <!-- Cliente -->
-      <select bind:value={clienteId} class="w-full p-3 border rounded-lg">
-        <option value="">Público General</option>
-        {#each clientes as c}
-          <option value={c.id}>{c.nombre} {c.apellido}</option>
-        {/each}
-      </select>
+    <div class="p-6">
+      <form onsubmit={submitVenta} class="space-y-6">
+        <!-- Selector de Cliente -->
+        <select 
+          bind:value={clienteId}
+          class="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 text-gray-700"
+        >
+          <option value="">Público General</option>
+          {#each clientes as c}
+            <option value={c.id}>{c.nombre} {c.apellido}</option>
+          {/each}
+        </select>
 
-      <!-- Items -->
-      <div>
-        <div class="grid grid-cols-12 gap-3 text-sm font-semibold text-gray-600 border-b pb-2">
-          <div class="col-span-4">Producto</div>
-          <div class="col-span-3 text-center">Lote</div>
-          <div class="col-span-1 text-center">Cant.</div>
-          <div class="col-span-2 text-center">Precio</div>
-          <div class="col-span-2 text-center">Subtotal</div>
+        <!-- Encabezados -->
+        <div class="grid grid-cols-12 gap-3 font-semibold text-gray-600 border-b pb-2">
+          <div class="col-span-5">Producto</div>
+          <div class="col-span-2 text-center">Cant.</div>
+          <div class="col-span-2 text-center">P.Unit</div>
+          <div class="col-span-2 text-center">Subt.</div>
+          <div class="col-span-1"></div>
         </div>
 
-        {#each items as item (item.id)}
-          <div class="grid grid-cols-12 gap-3 items-center mt-2">
-            <!-- Producto -->
-            <select
-              class="col-span-4 p-2 border rounded"
-              bind:value={item.medicamentoId}
-              on:change={(e) => updateItem(item.id, 'medicamentoId', parseInt(e.target.value))}
-            >
-              {#each medicamentos as m}
-                <option value={m.id}>{m.nombre_comercial} ({m.forma_farmaceutica})</option>
-              {/each}
-            </select>
+        <!-- Items -->
+        <div class="space-y-3">
+          {#each items as item (item.id)}
+            <div class="grid grid-cols-12 gap-3 items-center">
+              <!-- Botón Seleccionar Producto -->
+              <div class="col-span-5">
+                {#if item.nombreProducto}
+                  <div class="p-2 border-2 border-gray-300 rounded-lg bg-gray-50">
+                    <div class="text-sm font-medium">{item.nombreProducto}</div>
+                    {#if item.numeroLote}
+                      <div class="text-xs text-gray-500">Lote: {item.numeroLote}</div>
+                    {/if}
+                  </div>
+                {:else}
+                  <button
+                    type="button"
+                    onclick={() => openLotesModal(item.id)}
+                    class="w-full p-2 border-2 border-blue-500 text-blue-600 rounded-lg hover:bg-blue-50 font-medium transition"
+                  >
+                    Seleccionar
+                  </button>
+                {/if}
+              </div>
 
-            <!-- Lote -->
-            <div class="col-span-3 text-center">
-              {#if item.loteInfo}
-                <div class="text-sm text-green-600 font-medium">
-                  #{item.loteInfo.id} — Stock: {item.loteInfo.cantidad_actual}
-                </div>
-              {:else}
-                <span class="text-gray-400 italic">Sin lote</span>
-              {/if}
-              <button
+              <input 
+                type="number"
+                bind:value={item.cantidad}
+                oninput={(e) => updateItem(item.id, 'cantidad', parseInt(e.target.value) || 1)}
+                min="1"
+                class="col-span-2 p-2 border-2 border-gray-300 text-center rounded-lg"
+              />
+
+              <input 
+                type="text" 
+                value={`S/ ${item.precioUnitario.toFixed(2)}`} 
+                disabled 
+                class="col-span-2 p-2 border rounded-lg bg-gray-50 text-center" 
+              />
+              
+              <input 
+                type="text" 
+                value={`S/ ${(item.cantidad * item.precioUnitario).toFixed(2)}`} 
+                disabled 
+                class="col-span-2 p-2 border rounded-lg bg-gray-100 text-center font-semibold" 
+              />
+
+              <button 
                 type="button"
-                class="mt-1 bg-blue-600 text-white px-2 py-1 rounded text-xs hover:bg-blue-700"
-                on:click={() => abrirModalLotes(item.id)}
+                onclick={() => removeItem(item.id)}
+                disabled={items.length === 1}
+                class="col-span-1 text-red-500 hover:text-red-700 font-bold text-xl flex justify-center disabled:opacity-50"
               >
-                📦 Seleccionar
+                ×
               </button>
             </div>
+          {/each}
+        </div>
 
-            <!-- Cantidad -->
-            <input
-              type="number"
-              min="1"
-              class="col-span-1 p-2 border rounded text-center"
-              bind:value={item.cantidad}
-              on:input={(e) => updateItem(item.id, 'cantidad', parseInt(e.target.value))}
-            />
+        <!-- Botón añadir producto -->
+        <button 
+          type="button" 
+          onclick={addItem} 
+          class="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 py-2 px-4 rounded-lg transition"
+        >
+          ➕ Añadir Producto
+        </button>
 
-            <!-- Precio -->
-            <input
-              type="text"
-              class="col-span-2 p-2 border rounded text-center bg-gray-50"
-              value={`S/ ${(medicamentos.find(m => m.id == item.medicamentoId)?.precio_venta || 0).toFixed(2)}`}
-              disabled
-            />
+        <!-- Total -->
+        <div class="bg-gray-50 p-4 rounded-lg border-2 border-gray-200 text-right">
+          <span class="text-lg font-semibold text-gray-700">Total:</span>
+          <span class="text-2xl font-bold text-green-600">S/ {totalGeneral.toFixed(2)}</span>
+        </div>
 
-            <!-- Subtotal -->
-            <input
-              type="text"
-              class="col-span-2 p-2 border rounded text-center font-semibold bg-gray-100"
-              value={`S/ ${(item.cantidad * (medicamentos.find(m => m.id == item.medicamentoId)?.precio_venta || 0)).toFixed(2)}`}
-              disabled
-            />
-          </div>
-        {/each}
-      </div>
-
-      <!-- Total -->
-      <div class="bg-gray-50 p-4 rounded-lg border text-right">
-        <span class="text-lg font-semibold">Total: </span>
-        <span class="text-2xl font-bold text-green-600">S/ {totalGeneral.toFixed(2)}</span>
-      </div>
-
-      <button
-        class="w-full bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-3 px-4 rounded-lg text-lg shadow-lg"
-        on:click={submitVenta}
-        disabled={isLoading}
-      >
-        {isLoading ? '⏳ Procesando...' : 'Confirmar Venta'}
-      </button>
+        <!-- Confirmar -->
+        <button 
+          type="submit"
+          disabled={isLoading || items.length === 0}
+          class="w-full bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-3 px-4 rounded-lg text-lg shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition"
+        >
+          {isLoading ? '⏳ Procesando...' : 'Confirmar Venta'}
+        </button>
+      </form>
     </div>
   </div>
-
-  <!-- Modal de Lotes -->
-  {#if showModalLotes.open}
-    <ModalLotes
-      medicamentoId={showModalLotes.medicamentoId}
-      on:close={() => (showModalLotes = { open: false, medicamentoId: null })}
-      on:select={handleLoteSeleccionado}
-    />
-  {/if}
 </main>
+
+<!-- Modal de Selección de Lotes -->
+{#if showLotesModal}
+  <div class="modal-overlay">
+    <button
+      type="button"
+      class="modal-backdrop"
+      onclick={closeLotesModal}
+      aria-label="Cerrar modal"
+    ></button>
+
+    <div class="modal-content">
+      <!-- Header del Modal -->
+      <div class="flex justify-between items-center p-6 border-b bg-gradient-to-r from-blue-600 to-blue-700">
+        <h3 class="text-2xl font-bold text-white">📦 Seleccionar Lote</h3>
+        <button
+          type="button"
+          onclick={closeLotesModal}
+          disabled={cargandoLotes}
+          class="text-white hover:bg-white/20 rounded-full p-2 text-3xl"
+          aria-label="Cerrar modal"
+        >
+          &times;
+        </button>
+      </div>
+
+      <div class="overflow-y-auto max-h-[calc(90vh-80px)]">
+        <!-- Barra de búsqueda -->
+        <div class="p-4 border-b bg-gray-50 sticky top-0 z-10">
+          <input
+            type="text"
+            bind:value={busqueda}
+            placeholder="🔍 Buscar por medicamento, lote, categoría o proveedor..."
+            class="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 outline-none"
+          />
+        </div>
+
+        <!-- Contenido del Modal -->
+        <div class="p-4">
+          {#if cargandoLotes}
+            <div class="text-center py-8">
+              <p class="text-gray-600">Cargando lotes...</p>
+            </div>
+          {:else if errorLotes}
+            <div class="text-center py-8">
+              <p class="text-red-500">❌ {errorLotes}</p>
+            </div>
+          {:else if lotesFiltrados.length === 0}
+            <div class="text-center py-8">
+              <p class="text-gray-600">
+                {busqueda ? 'No se encontraron lotes que coincidan con la búsqueda.' : 'No hay lotes disponibles.'}
+              </p>
+            </div>
+          {:else}
+            <div class="overflow-x-auto">
+              <table class="w-full border-collapse border border-gray-300 text-sm">
+                <thead class="bg-gray-100 sticky top-0">
+                  <tr>
+                    <th class="border border-gray-300 p-2 text-left">Medicamento</th>
+                    <th class="border border-gray-300 p-2 text-left">Categoría</th>
+                    <th class="border border-gray-300 p-2 text-left">N° Lote</th>
+                    <th class="border border-gray-300 p-2 text-left">Proveedor</th>
+                    <th class="border border-gray-300 p-2 text-center">Ingreso</th>
+                    <th class="border border-gray-300 p-2 text-center">Vencimiento</th>
+                    <th class="border border-gray-300 p-2 text-center">Stock</th>
+                    <th class="border border-gray-300 p-2 text-right">Precio Venta</th>
+                    <th class="border border-gray-300 p-2 text-center">Acción</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {#each lotesFiltrados as lote}
+                    <tr class="hover:bg-blue-50 transition">
+                      <td class="border border-gray-300 p-2 font-medium">
+                        {lote.medicamentos?.nombre_comercial || 'N/A'}
+                      </td>
+                      <td class="border border-gray-300 p-2">
+                        {lote.medicamentos?.categoria || 'N/A'}
+                      </td>
+                      <td class="border border-gray-300 p-2 font-mono text-xs">
+                        {lote.numero_lote || 'N/A'}
+                      </td>
+                      <td class="border border-gray-300 p-2">
+                        {lote.proveedores?.nombre || 'N/A'}
+                      </td>
+                      <td class="border border-gray-300 p-2 text-center text-xs">
+                        {new Date(lote.fecha_ingreso).toLocaleDateString('es-PE')}
+                      </td>
+                      <td class="border border-gray-300 p-2 text-center text-xs">
+                        {new Date(lote.fecha_vencimiento).toLocaleDateString('es-PE')}
+                      </td>
+                      <td class="border border-gray-300 p-2 text-center">
+                        <span class="inline-block px-2 py-1 rounded {lote.cantidad_actual < 10 ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}">
+                          {lote.cantidad_actual}
+                        </span>
+                      </td>
+                      <td class="border border-gray-300 p-2 text-right font-semibold">
+                        S/ {lote.medicamentos?.precio_venta?.toFixed(2) || '0.00'}
+                      </td>
+                      <td class="border border-gray-300 p-2 text-center">
+                        <button
+                          type="button"
+                          onclick={() => selectLote(lote)}
+                          class="bg-blue-500 text-white px-4 py-1 rounded hover:bg-blue-600 transition font-medium"
+                        >
+                          Seleccionar
+                        </button>
+                      </td>
+                    </tr>
+                  {/each}
+                </tbody>
+              </table>
+            </div>
+          {/if}
+        </div>
+      </div>
+    </div>
+  </div>
+{/if}
+
+<style>
+  .modal-overlay {
+    position: fixed; 
+    inset: 0;
+    display: flex; 
+    align-items: center; 
+    justify-content: center;
+    z-index: 50; 
+    padding: 1rem;
+  }
+  
+  .modal-backdrop {
+    position: absolute; 
+    inset: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(3px);
+    cursor: pointer;
+    border: none;
+  }
+  
+  .modal-content {
+    position: relative; 
+    background: white;
+    border-radius: 1rem; 
+    width: 100%; 
+    max-width: 80rem;
+    box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
+    overflow: hidden;
+    max-height: 90vh;
+  }
+</style>
