@@ -191,11 +191,11 @@
     }
   }
 
-  function generatePDF(ventaResult) {
+function generatePDF(ventaResult) {
     const doc = new jsPDF({
       orientation: 'portrait',
       unit: 'mm',
-      format: [72, 152]
+      format: [72, 152] // Mantenemos tu tamaño exacto
     });
     
     doc.setFontSize(14);
@@ -213,10 +213,11 @@
     }
     
     doc.setFontSize(8);
-    doc.text('Producto', 12, 50, { align: 'left' });
+    // Ajustado para mejor espaciado
+    doc.text('Producto', 8, 50, { align: 'left' });
     doc.text('Cant.', 40, 50, { align: 'center' });
     doc.text('P.U.', 50, 50, { align: 'center' });
-    doc.text('Total', 60, 50, { align: 'right' });
+    doc.text('Total', 62, 50, { align: 'right' });
     
     doc.line(5, 52, 67, 52);
     
@@ -225,17 +226,18 @@
       if (item.medicamentoId) {
         const subtotal = item.cantidad * item.precioUnitario;
         
+        // Ajustado truncado para mejor visualización
         let productName = item.nombreProducto;
-        if (productName.length > 15) {
-          productName = productName.substring(0, 12) + '...';
+        if (productName.length > 18) {
+          productName = productName.substring(0, 15) + '...';
         }
         
-        doc.text(productName, 12, yPos, { align: 'left' });
+        doc.text(productName, 8, yPos, { align: 'left' });
         doc.text(item.cantidad.toString(), 40, yPos, { align: 'center' });
         doc.text(`S/ ${item.precioUnitario.toFixed(2)}`, 50, yPos, { align: 'center' });
-        doc.text(`S/ ${subtotal.toFixed(2)}`, 60, yPos, { align: 'right' });
+        doc.text(`S/ ${subtotal.toFixed(2)}`, 62, yPos, { align: 'right' });
         
-        yPos += 7;
+        yPos += 9; // Aumentado ligeramente el espaciado entre filas
         
         if (yPos > 135) {
           doc.addPage();
@@ -251,7 +253,7 @@
     doc.text(`TOTAL: S/ ${ventaResult.total_calculado.toFixed(2)}`, 36, yPos, { align: 'center' });
     
     doc.save(`venta_${ventaResult.venta_id}.pdf`);
-  }
+}
 </script>
 
 <main class="container mx-auto p-6">
