@@ -3,7 +3,7 @@
   import { supabase } from '$lib/supabaseClient';
   import { goto } from '$app/navigation';
   import jsPDF from 'jspdf';
-	import { Script } from 'vm';
+  import ModalLotes from '$lib/components/ModalLotes.svelte';
 
   let session = null;
   let clientes = [];
@@ -12,8 +12,13 @@
   let clienteId = '';
   let isLoading = false;
   let totalGeneral = 0;
+  let showModalLotes = false;
+  let selectedMedicamento = null;
+  let currentItemId = null;
+
   const API_URL = 'https://farmacia-269414280318.europe-west1.run.app';
 
+  // 🔹 Carga inicial
   onMount(async () => {
     const { data, error } = await supabase.auth.getSession();
     if (error || !data.session) {
@@ -22,9 +27,10 @@
     }
     session = data.session;
     await loadData();
-    addItem(); // primer ítem por defecto
+    addItem(); // Primer ítem por defecto
   });
 
+  // 🔹 Cargar clientes y medicamentos
   async function loadData() {
     try {
       isLoading = true;
@@ -42,11 +48,14 @@
     }
   }
 
+  // 🔹 Agregar producto a la lista
   function addItem() {
-    items = [...items, { id: Date.now(), medicamentoId: medicamentos[0]?.id ?? 0, cantidad: 1 }];
+    const defaultMed = medicamentos[0]?.id ?? 0;
+    items = [...items, { id: Date.now(), medicamentoId: defaultMed, cantidad: 1 }];
     calcTotal();
   }
 
+  // 🔹 Eliminar ítem
   function removeItem(id) {
     if (items.length > 1) {
       items = items.filter((i) => i.id !== id);
@@ -54,11 +63,15 @@
     }
   }
 
+  // 🔹 Actualizar valor de un ítem
   function updateItem(id, field, value) {
-    items = items.map((i) => (i.id === id ? { ...i, [field]: value } : i));
+    items = items.map((i) =>
+      i.id === id ? { ...i, [field]: value > 0 ? value : 1 } : i
+    );
     calcTotal();
   }
 
+  // 🔹 Calcular total
   function calcTotal() {
     totalGeneral = items.reduce((sum, i) => {
       const med = medicamentos.find((m) => m.id == i.medicamentoId);
@@ -66,6 +79,7 @@
     }, 0);
   }
 
+  // 🔹 Registrar venta
   async function submitVenta() {
     if (items.length === 0) {
       alert('Agrega al menos un producto.');
@@ -81,8 +95,6 @@
       }))
     };
 
-    console.log("📦 Enviando venta:", ventaData);
-
     try {
       isLoading = true;
       const res = await fetch(`${API_URL}/ventas`, {
@@ -95,26 +107,19 @@
       });
 
       const result = await res.json();
-      if (!res.ok) {
-        console.error("❌ Error respuesta API:", result);
-        throw new Error(result.error || 'Error al registrar venta');
-      }
+      if (!res.ok) throw new Error(result.error || 'Error al registrar venta');
 
-      alert(`✅ Venta registrada! ID: ${result.venta_id} Total: $${result.total_calculado}`);
+      alert(`✅ Venta registrada! ID: ${result.venta_id} Total: S/ ${result.total_calculado}`);
       
-      // Generar PDF de la venta
-      try {
-        generatePDF(result);
-      } catch (pdfError) {
-        console.error('Error al generar PDF:', pdfError);
-        // No mostrar alerta aquí para evitar dos alertas
-      }
-      
+      // Generar PDF automáticamente
+      generatePDF(result);
+
       // Limpiar formulario
+      clienteId = '';
       items = [];
       addItem();
-      clienteId = '';
       totalGeneral = 0;
+
     } catch (e) {
       alert(`❌ ${e.message}`);
     } finally {
@@ -122,83 +127,62 @@
     }
   }
 
-
+  // 🔹 Generar PDF estilo boleta 72mm
   function generatePDF(ventaResult) {
-    // Crear PDF con tamaño personalizado: 72mm de ancho y 152mm de altura (150mm + 2mm margen inferior)
     const doc = new jsPDF({
       orientation: 'portrait',
       unit: 'mm',
-      format: [72, 152] // Ancho: 72mm, Altura: 150mm + 2mm margen inferior
+      format: [72, 152]
     });
-    
-    // Configuración inicial
+
     doc.setFontSize(14);
-    doc.text('Comprobante de Venta', 36, 15, { align: 'center' }); // Centrado en 72mm
-    
-    // Información de la venta (centrada)
+    doc.text('Comprobante de Venta', 36, 15, { align: 'center' });
+
     doc.setFontSize(10);
     doc.text(`ID: ${ventaResult.venta_id}`, 36, 30, { align: 'center' });
-    doc.text(`Fecha: ${new Date().toLocaleDateString()}`, 36, 40, { align: 'center' });
-    
-    // Información del cliente (centrada)
+    doc.text(`Fecha: ${new Date().toLocaleDateString()}`, 36, 38, { align: 'center' });
+
     const cliente = clientes.find(c => c.id == clienteId);
-    if (cliente) {
-      doc.text(`Cliente: ${cliente.nombre} ${cliente.apellido}`, 36, 50, { align: 'center' });
-    } else {
-      doc.text('Cliente: Público General', 36, 50, { align: 'center' });
-    }
-    
-    // Encabezado de tabla (centrado)
+    doc.text(
+      `Cliente: ${cliente ? `${cliente.nombre} ${cliente.apellido}` : 'Público General'}`,
+      36,
+      46,
+      { align: 'center' }
+    );
+
+    // Encabezado tabla
     doc.setFontSize(8);
-    doc.text('Producto', 18, 70, { align: 'center' });
-    doc.text('Cant.', 34, 70, { align: 'center' });
-    doc.text('P.U.', 46, 70, { align: 'center' });
-    doc.text('Total', 58, 70, { align: 'center' });
-    
-    // Línea divisoria
-    doc.line(2, 73, 70, 73);
-    
-    // Items de la venta (centrados)
-    let yPos = 83;
-    items.forEach(item => {
-      const medicamento = medicamentos.find(m => m.id == item.medicamentoId);
-      if (medicamento) {
-        const subtotal = item.cantidad * medicamento.precio_venta;
-        
-        // Truncar nombre de producto
-        let productName = medicamento.nombre_comercial;
-        if (productName.length > 12) {
-          productName = productName.substring(0, 9) + '...';
-        }
-        
-        doc.text(productName, 18, yPos, { align: 'center' });
-        doc.text(item.cantidad.toString(), 34, yPos, { align: 'center' });
-        doc.text(`S/ ${medicamento.precio_venta.toFixed(2)}`, 46, yPos, { align: 'center' });
-        doc.text(`S/ ${subtotal.toFixed(2)}`, 58, yPos, { align: 'center' });
-        
-        yPos += 8;
-        
-        // Añadir página si necesitamos más espacio (ajustado para nueva altura)
-        if (yPos > 132) { // 150 - 18 (margen superior) - 2 (margen inferior) = 130, pero dejamos un poco más de espacio
-          doc.addPage();
-          yPos = 15;
-        }
+    doc.text('Producto', 10, 60);
+    doc.text('Cant.', 35, 60);
+    doc.text('P.U.', 48, 60);
+    doc.text('Total', 60, 60);
+    doc.line(5, 62, 67, 62);
+
+    // Items
+    let y = 70;
+    items.forEach((item) => {
+      const med = medicamentos.find((m) => m.id == item.medicamentoId);
+      if (med) {
+        const subtotal = item.cantidad * med.precio_venta;
+        const name = med.nombre_comercial.length > 12
+          ? med.nombre_comercial.substring(0, 9) + '...'
+          : med.nombre_comercial;
+
+        doc.text(name, 10, y);
+        doc.text(item.cantidad.toString(), 35, y, { align: 'center' });
+        doc.text(`S/ ${med.precio_venta.toFixed(2)}`, 48, y, { align: 'center' });
+        doc.text(`S/ ${subtotal.toFixed(2)}`, 60, y, { align: 'center' });
+        y += 7;
       }
     });
-    
-    // Total final (centrado) con margen inferior
-    yPos += 5;
-    doc.line(2, yPos, 70, yPos);
-    yPos += 8; // Aumentado el espacio antes del total para mejor separación
+
+    doc.line(5, y + 2, 67, y + 2);
     doc.setFontSize(10);
-    doc.text(`Total: S/ ${ventaResult.total_calculado.toFixed(2)}`, 36, yPos, { align: 'center' });
-    
-    // Guardar el PDF
+    doc.text(`Total: S/ ${ventaResult.total_calculado.toFixed(2)}`, 36, y + 10, { align: 'center' });
+
     doc.save(`venta_${ventaResult.venta_id}.pdf`);
   }
-
 </script>
-
 
 <main class="container mx-auto p-6">
   <div class="bg-white rounded-lg shadow-lg overflow-hidden">
@@ -207,7 +191,7 @@
     </div>
 
     <div class="p-6 space-y-6">
-      <!-- Selector de Cliente -->
+      <!-- 🔹 Cliente -->
       <select bind:value={clienteId} class="w-full p-3 border rounded-lg">
         <option value="">Público General</option>
         {#each clientes as c}
@@ -215,30 +199,30 @@
         {/each}
       </select>
 
-      <!-- Items -->
+      <!-- 🔹 Items -->
       <div>
         <div class="grid grid-cols-12 gap-3 text-sm font-semibold text-gray-600 border-b pb-2">
           <div class="col-span-5">Producto</div>
-          <div class="col-span-2 text-center">Cantidad</div>
-          <div class="col-span-2 text-center">Precio Unit.</div>
+          <div class="col-span-2 text-center">Cant.</div>
+          <div class="col-span-2 text-center">Precio U.</div>
           <div class="col-span-2 text-center">Subtotal</div>
           <div class="col-span-1"></div>
         </div>
 
         {#each items as item (item.id)}
           <div class="grid grid-cols-12 gap-3 items-center mt-2">
+            <!-- Producto -->
             <select
               class="col-span-5 p-2 border rounded"
               bind:value={item.medicamentoId}
               on:change={(e) => updateItem(item.id, 'medicamentoId', parseInt(e.target.value))}
             >
               {#each medicamentos as m}
-                <option value={m.id}>
-                  {m.nombre_comercial} ({m.forma_farmaceutica})
-                </option>
+                <option value={m.id}>{m.nombre_comercial} ({m.forma_farmaceutica})</option>
               {/each}
             </select>
 
+            <!-- Cantidad -->
             <input
               type="number"
               min="1"
@@ -247,6 +231,7 @@
               on:input={(e) => updateItem(item.id, 'cantidad', parseInt(e.target.value))}
             />
 
+            <!-- Precio Unitario -->
             <input
               type="text"
               class="col-span-2 p-2 border rounded text-center bg-gray-50"
@@ -254,6 +239,7 @@
               disabled
             />
 
+            <!-- Subtotal -->
             <input
               type="text"
               class="col-span-2 p-2 border rounded text-center font-semibold bg-gray-100"
@@ -261,24 +247,24 @@
               disabled
             />
 
+            <!-- Quitar -->
             <button
               type="button"
               class="col-span-1 text-red-500 font-bold"
               on:click={() => removeItem(item.id)}
               disabled={items.length === 1}
             >
-              X
+              ✖
             </button>
           </div>
         {/each}
       </div>
 
-      <!-- Botón añadir producto -->
       <button type="button" class="w-full bg-gray-100 p-2 rounded" on:click={addItem}>
         ➕ Añadir Producto
       </button>
 
-      <!-- Total -->
+      <!-- 🔹 Total -->
       <div class="bg-gray-50 p-4 rounded-lg border">
         <div class="text-right">
           <span class="text-lg font-semibold">Total General: </span>
@@ -286,7 +272,7 @@
         </div>
       </div>
 
-      <!-- Confirmar -->
+      <!-- 🔹 Confirmar -->
       <button
         class="w-full bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-3 px-4 rounded-lg text-lg shadow-lg"
         on:click={submitVenta}
@@ -296,4 +282,17 @@
       </button>
     </div>
   </div>
+
+  <!-- 🔹 Modal de lotes -->
+  <ModalLotes
+    show={showModalLotes}
+    medicamentoId={selectedMedicamento}
+    token={session?.access_token}
+    on:select={(e) => {
+      const lote = e.detail;
+      items = items.map(i => i.id === currentItemId ? { ...i, loteId: lote.id, loteInfo: lote } : i);
+      showModalLotes = false;
+    }}
+    on:close={() => (showModalLotes = false)}
+  />
 </main>
