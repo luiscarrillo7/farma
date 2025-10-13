@@ -194,7 +194,7 @@
 function generatePDF(ventaResult) {
     // Calcular el alto dinámico según la cantidad de items
     const itemsCount = items.filter(item => item.medicamentoId).length;
-    const baseHeight = 152; // Alto base
+    const baseHeight = 120; // Alto base
     const itemHeight = 9; // Espacio por item
     const extraHeight = 20; // Espacio extra para header/footer
     const totalHeight = baseHeight + (itemsCount * itemHeight) + extraHeight;
